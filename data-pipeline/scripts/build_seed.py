@@ -227,14 +227,16 @@ def main():
     dist, unmapped = [], Counter()
     for p in sorted(glob.glob(str(base / "out/score_dist_*.csv"))):
         for r in csv.DictReader(open(p, encoding="utf-8")):
-            # 2023-2025 all use old So codes (exams predate the 1/7/2025 merger).
-            # New-system codes are kept as-is; the rest are left blank + logged.
+            # 2026 uses new province codes (post-merger): prefer identity, fallback old map.
+            # 2023-2025 exams predate the merger: prefer the old So map.
             t = (r.get("tinh") or "")
-            if t and t in pmap: r["tinh_new"] = pmap[t]
-            elif t and t in newcodes: r["tinh_new"] = t
+            y = str(r.get("nam", ""))
+            if y == "2026":
+                hit = (t if t in newcodes else "") or pmap.get(t, "")
             else:
-                r["tinh_new"] = ""
-                if t: unmapped[f"{r.get('nam')}:{t}"] += int(r["count"])
+                hit = pmap.get(t, "") or (t if t in newcodes else "")
+            r["tinh_new"] = hit
+            if t and not hit: unmapped[f"{y}:{t}"] += int(r["count"])
             dist.append(r)
     with open(seed / "score_distribution.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=["ky_thi","nam","to_hop","tinh","tinh_new","chuong_trinh","diem","count"])

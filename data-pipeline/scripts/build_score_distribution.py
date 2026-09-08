@@ -57,6 +57,51 @@ def distribute(df: pd.DataFrame, combos: dict, nam: int, out_path: str, chuong_t
     pd.DataFrame(recs).to_csv(out_path, index=False)
     print(f"[save] {out_path} ({len(recs)} rows)")
 
+KHOI_MAP = {"KhoiA": "A00", "KhoiA1": "A01", "KhoiA02": "A02", "KhoiB": "B00",
+            "KhoiC": "C00", "KhoiC01": "C01", "KhoiD": "D01", "KhoiD07": "D07"}
+
+def load_sdgedfegw(path: str) -> pd.DataFrame:
+    """Schema sdgedfegw/du-lieu-diem-thi: SBD,Tinh + Khoi* precomputed (2017-2022, 2026)."""
+    df = pd.read_csv(path, dtype=str)
+    df["sbd"] = norm_sbd(df["SBD"])
+    df = df.dropna(subset=["sbd"])
+    df["tinh"] = df["Tinh"].astype(str).str.strip().str.zfill(2)
+    df["tinh"] = df["tinh"].where(df["tinh"].str.match(r"^\d{2}$", na=False))
+    return df
+
+def distribute_khoi(df: pd.DataFrame, nam: int, out_path: str, chuong_trinh: str = ""):
+    import sys
+    sys.path.insert(0, "data-pipeline/scripts")
+    from province_data import PROVINCE_MAP
+    pmap = {k: v[0] for k, v in PROVINCE_MAP.items()}
+    newcodes = {v[0] for v in PROVINCE_MAP.values()}
+    recs = []
+    for khoi, to_hop in KHOI_MAP.items():
+        if khoi not in df.columns: continue
+        s = pd.to_numeric(df[khoi], errors="coerce").round(2)
+        ok = s.dropna()
+        if ok.empty: continue
+        vc = pd.concat([df.loc[ok.index, "tinh"], ok], axis=1).value_counts().sort_index()
+        for (tinh, diem), cnt in vc.items():
+            if pd.isna(tinh): continue
+            recs.append({"ky_thi": "THPTQG", "nam": nam, "to_hop": to_hop,
+                         "tinh": tinh, "tinh_new": map_tinh(tinh, nam, pmap, newcodes),
+                         "chuong_trinh": chuong_trinh,
+                         "diem": float(diem), "count": int(cnt)})
+        for diem, cnt in ok.value_counts().sort_index().items():
+            recs.append({"ky_thi": "THPTQG", "nam": nam, "to_hop": to_hop,
+                         "tinh": "", "tinh_new": "",
+                         "chuong_trinh": chuong_trinh,
+                         "diem": float(diem), "count": int(cnt)})
+    pd.DataFrame(recs).to_csv(out_path, index=False)
+    print(f"[save] {out_path} ({len(recs)} rows)", flush=True)
+
+def map_tinh(t: str, nam: int, pmap: dict, newcodes: set) -> str:
+    if not t: return ""
+    if nam == 2026:
+        return (t if t in newcodes else "") or pmap.get(t, "")
+    return pmap.get(t, "") or (t if t in newcodes else "")
+
 def load_old(path: str) -> pd.DataFrame:
     df = pd.read_csv(path, dtype={"sbd": str}, usecols=lambda c: c != "ma_ngoai_ngu")
     df["sbd"] = norm_sbd(df["sbd"])
@@ -99,9 +144,16 @@ def main():
     ap.add_argument("--rawdir", default="data/raw/scores")
     ap.add_argument("--outdir", default="data/out")
     ap.add_argument("--years", default="2023,2024,2025")
+    ap.add_argument("--bulkdir", default="/tmp/bulk",
+                    help="Thư mục chứa bulk sdgedfegw du_lieu_diem_thi_{YYYY}.csv (2017-2022, 2026)")
     args = ap.parse_args()
     for y in [int(x) for x in args.years.split(",") if x.strip()]:
-        if y in (2023, 2024):
+        if y in (2017, 2018, 2019, 2020, 2021, 2022, 2026):
+            df = load_sdgedfegw(f"{args.bulkdir}/du_lieu_diem_thi_{y}.csv")
+            print(f"[{y}] {len(df):,} thí sinh (sdgedfegw)", flush=True)
+            distribute_khoi(df, y, f"{args.outdir}/score_dist_{y}.csv")
+            del df
+        elif y in (2023, 2024):
             df = load_old(f"{args.rawdir}/diem_thi_thpt_{y}.csv")
             print(f"[{y}] {len(df):,} candidates", flush=True)
             distribute(df, OLD_COMBOS, y, f"{args.outdir}/score_dist_{y}.csv")
