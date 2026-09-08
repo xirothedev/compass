@@ -56,15 +56,26 @@ create table if not exists exam_scores (
   sbd char(8) not null,
   ky_thi text not null default 'THPTQG',
   nam int not null,
+  chuong_trinh text,                   -- CT2018/CT2006 (2025+)
   tinh text not null,                  -- 2-digit province code
   toan numeric(4,2), ngu_van numeric(4,2), ngoai_ngu numeric(4,2),
   vat_li numeric(4,2), hoa_hoc numeric(4,2), sinh_hoc numeric(4,2),
   lich_su numeric(4,2), dia_li numeric(4,2), gdcd numeric(4,2),
-  tin_hoc numeric(4,2), cong_nghe numeric(4,2),
-  th_a00 numeric(5,2), th_a01 numeric(5,2), th_b00 numeric(5,2),
-  th_c00 numeric(5,2), th_d01 numeric(5,2), th_d07 numeric(5,2),
+  ktpl numeric(4,2), tin_hoc numeric(4,2),
+  cong_nghe_cn numeric(4,2), cong_nghe_nn numeric(4,2),
+  th_a00 numeric(5,2), th_a01 numeric(5,2), th_a02 numeric(5,2),
+  th_b00 numeric(5,2), th_c00 numeric(5,2), th_c01 numeric(5,2),
+  th_d01 numeric(5,2), th_d07 numeric(5,2),
+  th_a0t numeric(5,2), th_k01 numeric(5,2),
   primary key (ky_thi, nam, sbd)
 ) partition by list (nam);
+
+create table if not exists exam_scores_2017 partition of exam_scores for values in (2017);
+create table if not exists exam_scores_2018 partition of exam_scores for values in (2018);
+create table if not exists exam_scores_2019 partition of exam_scores for values in (2019);
+create table if not exists exam_scores_2020 partition of exam_scores for values in (2020);
+create table if not exists exam_scores_2021 partition of exam_scores for values in (2021);
+create table if not exists exam_scores_2022 partition of exam_scores for values in (2022);
 
 create table if not exists exam_scores_2023 partition of exam_scores for values in (2023);
 create table if not exists exam_scores_2024 partition of exam_scores for values in (2024);
