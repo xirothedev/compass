@@ -1,4 +1,4 @@
-"""Bulk exam scores (SBD + scores, NO names) -> data/exam_scores_{YYYY}.parquet.
+"""Bulk exam scores (SBD + scores, NO names) -> data/exam_scores_{YYYY}.csv.
 Sources (transient, deleted after build to keep data/ flat):
   /tmp/bulkfull/du_lieu_diem_thi_{2017-2022,2026}.csv (sdgedfegw, SBD/Tinh/Khoi* precomputed)
   /tmp/bulkfull/diem_thi_thpt_{2023,2024}.csv (anhdung98)
@@ -98,8 +98,8 @@ def main():
             df = pd.concat([a, b], ignore_index=True)
         else:
             raise SystemExit(f"unsupported year {y}")
-        out = f"{args.outdir}/exam_scores_{y}.parquet"
-        df.to_parquet(out, index=False)
+        out = f"{args.outdir}/exam_scores_{y}.csv"
+        df.to_csv(out, index=False)
         print(f"[{y}] {len(df):,} candidates -> {out}", flush=True)
         del df
 
