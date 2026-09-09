@@ -37,7 +37,7 @@ export function SiteHeader({ actions }: { actions?: ReactNode }) {
       </div>
       <nav className="flex gap-1 overflow-x-auto border-t border-white/10 px-4 py-1 md:hidden" aria-label="Chính">
         {[{ href: "/", label: "Trang chủ" }, ...NAV].map((n) => (
-          <a key={n.href} href={n.href} className="shrink-0 rounded-md px-3 py-2 text-sm font-medium text-white/85">
+          <a key={n.href} href={n.href} className="shrink-0 rounded-md px-3 py-3 text-sm font-medium text-white/85">
             {n.label}
           </a>
         ))}

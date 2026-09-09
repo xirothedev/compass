@@ -29,7 +29,7 @@ export function FilterChip({
       type="button"
       onClick={onToggle}
       aria-pressed={active}
-      className={`h-8 shrink-0 rounded-full border px-3.5 text-[13px] font-medium transition-colors ${
+      className={`min-h-[44px] shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors md:min-h-0 md:h-8 md:px-3.5 ${
         active
           ? "border-transparent bg-accent text-on-accent"
           : "border-line bg-surface text-ink hover:bg-surface-2"
@@ -97,9 +97,44 @@ export type CutoffRow = {
   tier: Bucket;
 };
 
+// ponytail: mobile-first cards + md table share one rows array; no JS breakpoint needed
 export function CutoffTable({ rows }: { rows: CutoffRow[] }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-line">
+    <>
+      <div className="flex flex-col gap-3 md:hidden">
+        {rows.map((r) => (
+          <article key={r.code} className="rounded-xl border border-line bg-surface p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold tracking-[0.04em] text-muted">{r.code}</p>
+                <h3 className="mt-0.5 text-[15px] font-semibold leading-snug text-ink">{r.name}</h3>
+              </div>
+              <TierBadge tier={r.tier} className="shrink-0" />
+            </div>
+            <p className="mt-2 text-[13px] text-muted">
+              {r.combos} • {r.method}
+            </p>
+            <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+              {[
+                ["2022", r.y2022, false],
+                ["2023", r.y2023, false],
+                ["2024", r.y2024, true],
+              ].map(([label, value, hot]) => (
+                <div
+                  key={label as string}
+                  className={`rounded-lg border px-2 py-2 ${hot ? "border-line bg-surface-2" : "border-line-soft"}`}
+                >
+                  <dt className="text-[11px] font-medium text-muted">{label}</dt>
+                  <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">
+                    {(value as number).toFixed(2)}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto rounded-lg border border-line md:block">
       <table className="w-full min-w-[880px] border-collapse bg-surface text-sm">
         <thead>
           <tr className="bg-surface-2 text-left text-xs font-semibold tracking-[0.02em] text-ink">
@@ -131,7 +166,8 @@ export function CutoffTable({ rows }: { rows: CutoffRow[] }) {
           ))}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }
 
