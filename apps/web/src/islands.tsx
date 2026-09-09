@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, RANK_TOTAL, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
 import { useProfile } from "./profile";
 
@@ -326,85 +326,287 @@ export function SuggestionList({
   );
 }
 
-/* ---------- Lookup: score + combo -> rank via server action ---------- */
+/* ---------- Lookup: subject-sum form + rank via server action (Stitch lookup) ---------- */
 const COMBOS = ["A00", "A01", "B00", "D01", "C00", "K01"];
+
+const COMBO_SUBJECTS: Record<string, [string, string, string]> = {
+  A00: ["Toán học", "Vật lí", "Hóa học"],
+  A01: ["Toán học", "Vật lí", "Tiếng Anh"],
+  B00: ["Toán học", "Hóa học", "Sinh học"],
+  C00: ["Ngữ văn", "Lịch sử", "Địa lí"],
+  D01: ["Toán học", "Ngữ văn", "Tiếng Anh"],
+  K01: ["Toán học", "Ngữ văn", "Đánh giá tư duy"],
+};
+
+const EXAMS = [
+  "Kỳ thi tốt nghiệp THPT 2025 (Chính thức)",
+  "Kỳ thi thử THPTQG Đợt 2 (Toàn quốc)",
+  "Kỳ thi tốt nghiệp THPT 2024",
+];
+
+function splitScore(score: number): [string, string, string] {
+  if (Math.abs(score - 26.85) < 0.001) return ["9.20", "8.75", "8.90"];
+  const each = (Math.max(0, Math.min(30, score)) / 3).toFixed(2);
+  return [each, each, each];
+}
+
+function num(v: string): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.min(10, Math.max(0, n)) : 0;
+}
 
 export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { defaultScore?: number; defaultCombo?: string }) {
   const [state, action, isPending] = useActionState(calcRank, null);
+  const [combo, setCombo] = useState(COMBOS.includes(defaultCombo) ? defaultCombo : "A00");
+  const [subjects, setSubjects] = useState<[string, string, string]>(() => splitScore(defaultScore));
+  const [priority, setPriority] = useState("0.00");
+  const total = useMemo(
+    () => Math.min(30, num(subjects[0]) + num(subjects[1]) + num(subjects[2]) + num(priority)),
+    [subjects, priority],
+  );
+  const setSubject = (i: number, v: string) =>
+    setSubjects((cur) => (i === 0 ? [v, cur[1], cur[2]] : i === 1 ? [cur[0], v, cur[2]] : [cur[0], cur[1], v]));
+  const reset = () => {
+    setCombo("A00");
+    setSubjects(["9.20", "8.75", "8.90"]);
+    setPriority("0.00");
+  };
+  const names = COMBO_SUBJECTS[combo];
   return (
-    <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
-      <form action={action} className="h-fit rounded-2xl border border-line bg-surface p-6">
-        <label htmlFor="score" className="text-sm font-semibold text-ink">
-          Điểm của bạn (thang 30)
-        </label>
-        <input
-          id="score"
-          name="score"
-          type="number"
-          min={0}
-          max={30}
-          step={0.01}
-          required
-          defaultValue={defaultScore}
-          className="mt-2 h-12 w-full rounded-lg border border-line px-4 text-lg font-bold tabular-nums focus:border-accent focus:ring-2 focus:ring-accent/30 focus:outline-none"
-        />
-        <label htmlFor="combo" className="mt-4 block text-sm font-semibold text-ink">
-          Tổ hợp xét tuyển
-        </label>
-        <select id="combo" name="combo" defaultValue={COMBOS.includes(defaultCombo) ? defaultCombo : "A00"} className="mt-2 h-12 w-full rounded-lg border border-line bg-surface px-3 text-sm focus:border-accent focus:outline-none">
-          {COMBOS.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="mt-5 h-11 w-full rounded-lg bg-cta text-sm font-semibold text-on-cta transition-transform hover:bg-cta-hover active:scale-[0.98] disabled:opacity-60"
-        >
-          {isPending ? "Đang tra cứu..." : "Tra cứu thứ hạng"}
-        </button>
-      </form>
-      <div className="h-fit overflow-hidden rounded-2xl bg-[#0d2c54] p-6 text-white" aria-live="polite">
-        {state ? (
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-5">
-              <Dial value={100 - state.percentile} />
-              <div>
-                <p className="text-sm text-white/70">
-                  Điểm {state.score.toFixed(2)} · Tổ hợp {state.combo}
-                </p>
-                <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
-                  #{state.rank.toLocaleString("vi-VN")}
-                </p>
-                <p className="mt-1 text-sm text-white/85">
-                  Top {state.percentile.toFixed(1)}% toàn quốc (ước tính từ phổ điểm mock).
-                </p>
-              </div>
+    <div className="grid gap-6 lg:grid-cols-12">
+      <div className="flex flex-col gap-4 lg:col-span-5">
+        <form action={action} className="rounded-2xl border border-line bg-surface p-6">
+          <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">Bước 1/2</p>
+          <h2 className="mt-1 text-xl font-semibold text-ink">Thông tin điểm thi của Thí sinh</h2>
+          <p className="mt-1 text-sm text-muted">Nhập chuẩn xác để có kết quả đối sánh chuẩn.</p>
+
+          <label htmlFor="exam" className="mt-5 block text-sm font-semibold text-ink">
+            Kỳ thi đánh giá
+          </label>
+          <select id="exam" name="exam" className="mt-2 h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink focus:border-accent focus:outline-none">
+            {EXAMS.map((e) => (
+              <option key={e}>{e}</option>
+            ))}
+          </select>
+
+          <span id="program-label" className="mt-4 block text-sm font-semibold text-ink">
+            Khung chương trình phổ thông
+          </span>
+          <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="program-label">
+            {[
+              ["GDPT 2018", "Sách giáo khoa mới"],
+              ["GDPT 2006", "Thí sinh tự do"],
+            ].map(([v, s], i) => (
+              <label key={v} className={`cursor-pointer rounded-xl border p-3 text-center ${i === 0 ? "border-accent bg-surface-2" : "border-line"}`}>
+                <input type="radio" name="program" value={v} defaultChecked={i === 0} className="sr-only" />
+                <span className="block text-sm font-semibold text-ink">{v}</span>
+                <span className="block text-xs text-muted">{s}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-4 flex items-center justify-between">
+            <span id="combo-label" className="text-sm font-semibold text-ink">
+              Tổ hợp môn xét tuyển
+            </span>
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="combo-label">
+            {COMBOS.map((c) => (
+              <label
+                key={c}
+                className={`cursor-pointer rounded-xl border p-2 text-center ${combo === c ? "border-accent bg-surface-2" : "border-line hover:bg-surface-2"}`}
+              >
+                <input
+                  type="radio"
+                  name="combo"
+                  value={c}
+                  checked={combo === c}
+                  onChange={() => setCombo(c)}
+                  className="sr-only"
+                />
+                <span className="block text-sm font-bold text-ink">{c}</span>
+                <span className="block truncate text-[11px] text-muted">{COMBO_SUBJECTS[c].join(" · ")}</span>
+              </label>
+            ))}
+          </div>
+
+          <div className="mt-4 rounded-xl bg-surface-2 p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-ink">Điểm thành phần (Thang 0 - 10)</p>
+              <span className="text-xs text-muted">Bước điểm 0.05</span>
             </div>
-            <TierBadge
-              tier={state.percentile <= 5 ? "safe" : state.percentile <= 20 ? "match" : "reach"}
-              className="self-start border-white/20"
-            />
-            <div className="flex flex-col gap-2 border-t border-white/15 pt-4 sm:flex-row">
-              <Link
-                href={`/suggestions?score=${state.score.toFixed(2)}&combo=${encodeURIComponent(state.combo)}`}
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
-              >
-                Xem gợi ý nguyện vọng
-              </Link>
-              <Link
-                href="/schools"
-                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-white/60 px-5 text-sm font-semibold text-white hover:bg-white/10"
-              >
-                So sánh điểm chuẩn
-              </Link>
+            <div className="mt-3 flex flex-col gap-2">
+              {names.map((label, i) => (
+                <label key={label} className="grid grid-cols-12 items-center gap-2">
+                  <span className="col-span-5 text-[13px] text-body">{label}</span>
+                  <input
+                    value={subjects[i]}
+                    onChange={(e) => setSubject(i, e.target.value)}
+                    type="number"
+                    min={0}
+                    max={10}
+                    step={0.05}
+                    aria-label={`Điểm ${label}`}
+                    className="col-span-7 h-11 rounded-lg border border-line bg-surface px-3 text-right text-sm font-bold tabular-nums text-ink focus:border-accent focus:outline-none"
+                  />
+                </label>
+              ))}
+              <label className="grid grid-cols-12 items-center gap-2">
+                <span className="col-span-5 text-[13px] text-body">Điểm ưu tiên</span>
+                <input
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value)}
+                  type="number"
+                  min={0}
+                  max={10}
+                  step={0.05}
+                  aria-label="Điểm ưu tiên"
+                  className="col-span-7 h-11 rounded-lg border border-line bg-surface px-3 text-right text-sm font-bold tabular-nums text-ink focus:border-accent focus:outline-none"
+                />
+              </label>
             </div>
           </div>
-        ) : (
-          <p className="text-sm text-white/75">Nhập điểm và tổ hợp để xem thứ hạng ước tính của bạn.</p>
-        )}
+
+          <div className="mt-3 rounded-xl border border-accent/40 bg-surface-2 p-4 text-center">
+            <p className="text-[13px] text-muted">Tổng điểm xét tuyển {combo} · Đã cộng ưu tiên</p>
+            <p className="mt-1 text-3xl font-bold tabular-nums text-ink">
+              {total.toFixed(2)} <span className="text-base font-medium text-muted">/ 30.00</span>
+            </p>
+          </div>
+          <input type="hidden" name="score" value={total.toFixed(2)} />
+
+          <div className="mt-4 flex gap-2">
+            <button
+              type="submit"
+              disabled={isPending}
+              className="h-11 flex-1 rounded-lg bg-cta text-sm font-semibold text-on-cta hover:bg-cta-hover disabled:opacity-60"
+            >
+              {isPending ? "Đang phân tích..." : "Phân tích Thứ hạng & Phổ điểm"}
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              aria-label="Nhập lại"
+              title="Nhập lại"
+              className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-line text-lg text-muted hover:bg-surface-2"
+            >
+              ↺
+            </button>
+          </div>
+        </form>
+
+        <div className="rounded-2xl border border-line bg-surface p-5">
+          <p className="text-sm font-semibold text-ink">Lưu ý về quy chế tính điểm 2025</p>
+          <p className="mt-1 text-[13px] leading-relaxed text-body">
+            Với mức tổng điểm từ 22.50 trở lên, điểm ưu tiên được tính giảm dần theo công thức{" "}
+            <code className="rounded bg-surface-2 px-1 font-mono">[(30 - Tổng điểm)/7.5] × Mức ưu tiên</code>.
+            Nhập điểm ưu tiên thực tế của bạn để tổng điểm chính xác.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4 lg:col-span-7">
+        <p className="rounded-full border border-line bg-surface px-3 py-1.5 text-center text-xs text-muted">
+          Ước tính vị trí phân vị tổ hợp {combo} toàn quốc
+        </p>
+        <div className="overflow-hidden rounded-2xl bg-[#0d2c54] p-6 text-white" aria-live="polite">
+          {state ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-5">
+                <Dial value={100 - state.percentile} />
+                <div>
+                  <p className="text-sm text-white/70">
+                    Điểm {state.score.toFixed(2)} · Tổ hợp {state.combo}
+                  </p>
+                  <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
+                    Hạng ~{state.rank.toLocaleString("vi-VN")}
+                  </p>
+                  <p className="mt-1 text-sm text-white/85">
+                    / 900.000 thí sinh · Top {state.percentile.toFixed(1)}% toàn quốc
+                  </p>
+                </div>
+              </div>
+              <TierBadge
+                tier={state.percentile <= 5 ? "safe" : state.percentile <= 20 ? "match" : "reach"}
+                className="self-start border-white/20"
+              />
+              <div className="flex flex-col gap-2 border-t border-white/15 pt-4 sm:flex-row">
+                <Link
+                  href={`/suggestions?score=${state.score.toFixed(2)}&combo=${encodeURIComponent(state.combo)}`}
+                  className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
+                >
+                  Xem gợi ý nguyện vọng
+                </Link>
+                <Link
+                  href="/schools"
+                  className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-white/60 px-5 text-sm font-semibold text-white hover:bg-white/10"
+                >
+                  So sánh điểm chuẩn
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-white/75">Nhập điểm thành phần rồi bấm Phân tích để xem thứ hạng ước tính của bạn.</p>
+          )}
+        </div>
+
+        <div className="rounded-2xl border border-line bg-surface p-5">
+          <h3 className="text-base font-semibold text-ink">Biểu đồ phân bố Phổ điểm Tổ hợp {combo}</h3>
+          <p className="mt-1 text-[13px] text-muted">Mô hình đường cong chuẩn hóa · trục điểm 0 - 30 · ghim vị trí của bạn.</p>
+          <svg viewBox="0 0 320 120" role="img" aria-label={`Vị trí ${total.toFixed(2)} điểm trên phổ`} className="mt-3 w-full">
+            {[20, 45, 70, 95].map((y) => (
+              <line key={y} x1="20" y1={y} x2="300" y2={y} stroke="var(--color-line)" strokeWidth="1" strokeDasharray="3 4" />
+            ))}
+            <path
+              d="M20 105 C 80 103, 110 95, 140 70 S 190 25, 215 30 S 260 75, 300 100"
+              fill="none"
+              stroke="var(--color-accent)"
+              strokeWidth="2.5"
+            />
+            {(() => {
+              const x = 20 + (Math.min(30, Math.max(0, total)) / 30) * 280;
+              return (
+                <g>
+                  <line x1={x} y1="12" x2={x} y2="105" stroke="#dc2626" strokeWidth="1.5" strokeDasharray="4 3" />
+                  <circle cx={x} cy="34" r="5" fill="#dc2626" />
+                </g>
+              );
+            })()}
+            <text x="20" y="118" fontSize="9" fill="var(--color-faint)">0</text>
+            <text x="155" y="118" fontSize="9" fill="var(--color-faint)">15</text>
+            <text x="292" y="118" fontSize="9" fill="var(--color-faint)">30</text>
+          </svg>
+          <p className="mt-1 text-center text-[13px] font-semibold tabular-nums text-ink">
+            Bạn đang ở đây: {total.toFixed(2)} điểm
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="rounded-full bg-surface-2 px-3 py-1 text-xs text-muted">Vùng điểm an toàn (19.0 - 24.5)</span>
+            <span className="rounded-full bg-surface-2 px-3 py-1 text-xs text-muted">Vùng trường Top đầu (&gt; 25.5)</span>
+          </div>
+        </div>
+
+        {state ? (
+          <div className="rounded-2xl border border-line bg-surface p-5">
+            <h3 className="text-base font-semibold text-ink">Phân tích chi tiết mức độ cạnh tranh</h3>
+            <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+              {[
+                ["Bằng hoặc cao hơn bạn", `~${state.rank.toLocaleString("vi-VN")}`, `Top ${state.percentile.toFixed(1)}%`],
+                ["Thấp hơn điểm của bạn", `~${(RANK_TOTAL - state.rank).toLocaleString("vi-VN")}`, "thí sinh đã vượt qua"],
+                ["Tổng mẫu phân tích", "900.000", "thí sinh cả nước"],
+              ].map(([l, v, s]) => (
+                <div key={l} className="rounded-lg bg-surface-2 p-3">
+                  <dt className="text-[11px] text-muted">{l}</dt>
+                  <dd className="mt-1 text-base font-bold tabular-nums text-ink">{v}</dd>
+                  <dd className="text-[11px] text-muted">{s}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-[13px] leading-relaxed text-muted">
+              Phương pháp luận: mô phỏng nội suy từ điểm mốc phổ điểm. Compass không thu thập hay lưu trữ Số báo
+              danh (SBD).
+            </p>
+          </div>
+        ) : null}
       </div>
     </div>
   );

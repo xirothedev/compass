@@ -15,13 +15,30 @@ export default async function LookupPage({
   const combo = (params.combo ?? CURRENT_USER.toHop).toUpperCase();
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
-      <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">Tra cứu</p>
-      <h1 className="mt-2 text-[32px] font-bold leading-[40px] tracking-tight text-ink">
-        Tra cứu Thứ hạng &amp; Phổ điểm THPTQG
-      </h1>
-      <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
-        Nhập điểm và tổ hợp xét tuyển để biết thứ hạng ước tính của bạn so với phổ điểm toàn quốc.
+      <p className="mx-auto w-fit rounded-full border border-line bg-surface px-3 py-1.5 text-center text-xs text-muted">
+        Dữ liệu kỳ thi 2025 · Chuẩn hóa GDPT 2018 &amp; 2006 · Bảo mật không cần SBD
       </p>
+      <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">Tra cứu</p>
+          <h1 className="mt-2 text-[32px] font-bold leading-[40px] tracking-tight text-ink">
+            Tra cứu Thứ hạng &amp; Phổ điểm THPTQG
+          </h1>
+          <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
+            Nhập điểm số dự kiến hoặc kết quả thi tốt nghiệp để xác định tọa độ phân vị của bạn trên phổ điểm toàn quốc.
+          </p>
+        </div>
+        <dl className="flex shrink-0 gap-2">
+          <div className="rounded-xl border border-line bg-surface px-4 py-2 text-center">
+            <dt className="text-[11px] text-muted">Mẫu chuẩn hóa</dt>
+            <dd className="text-base font-bold tabular-nums text-ink">900.000</dd>
+          </div>
+          <div className="rounded-xl border border-line bg-surface px-4 py-2 text-center">
+            <dt className="text-[11px] text-muted">Thang điểm</dt>
+            <dd className="text-base font-bold tabular-nums text-ink">30.00</dd>
+          </div>
+        </dl>
+      </div>
       <div className="mt-8">
         <LookupForm defaultScore={score} defaultCombo={combo} />
       </div>
