@@ -88,7 +88,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
       </div>
 
       {/* Sticky tabs */}
-      <nav aria-label="Mục trong trang" className="sticky top-16 z-30 mt-6 flex gap-1 overflow-x-auto border-y border-line bg-canvas/95 py-2 backdrop-blur md:top-16">
+      <nav aria-label="Mục trong trang" className="sticky top-[104px] z-30 mt-6 flex gap-1 overflow-x-auto border-y border-line bg-canvas/95 py-2 backdrop-blur lg:top-16">
         {[
           ["#tong-quan", "Tổng quan"],
           ["#diem-chuan", `Bảng Điểm chuẩn (${majors.length})`],
