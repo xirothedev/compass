@@ -10,7 +10,7 @@ export default function OnboardingPage() {
         Khảo sát định hướng nguyện vọng thông minh
       </h1>
       <p className="mx-auto mt-3 max-w-xl text-center text-base leading-relaxed text-body">
-        Hoàn thiện 4 bước khảo sát ngắn trong 2 phút để thuật toán Compass gợi ý giỏ nguyện vọng đầu tiên.
+        Hoàn thiện 5 bước khảo sát ngắn trong 2 phút để thuật toán Compass gợi ý giỏ nguyện vọng đầu tiên.
       </p>
       <div className="mt-8">
         <OnboardingWizard />

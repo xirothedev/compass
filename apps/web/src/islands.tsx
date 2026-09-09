@@ -243,8 +243,11 @@ export function LookupForm({ defaultScore = 26.85 }: { defaultScore?: number }) 
   );
 }
 
-/* ---------- Onboarding: 4-step wizard ---------- */
-const STEPS = ["Điểm số & Tổ hợp", "Nhóm ngành yêu thích", "Khu vực & Ngân sách", "Chiến lược"] as const;
+/* ---------- Onboarding: 5-step wizard (ends with Xác nhận hồ sơ) ---------- */
+const STEPS = ["Điểm số & Tổ hợp", "Nhóm ngành yêu thích", "Khu vực & Ngân sách", "Chiến lược", "Xác nhận hồ sơ"] as const;
+const COMBO_OPTIONS = ["A00", "A01", "B00", "D01", "C00", "K01"];
+const GROUP_OPTIONS = ["Kỹ thuật - Công nghệ", "Kinh tế - Quản trị", "Sức khỏe", "Xã hội - Nhân văn", "Ngoại ngữ"];
+const REGION_OPTIONS = ["Hà Nội", "TP.HCM", "Học phí dưới 25 triệu/năm"];
 const STRATEGIES = [
   { value: "balanced", title: "Chiến lược Cân bằng", desc: "Phân bố an toàn và mở rộng cơ hội ở các nhóm trường." },
   { value: "careful", title: "Chiến lược Thận trọng", desc: "Tối đa hóa xác suất đỗ đại học công lập." },
@@ -254,6 +257,9 @@ const STRATEGIES = [
 export function OnboardingWizard() {
   const [step, setStep] = useState(0);
   const [score, setScore] = useState("26.85");
+  const [combo, setCombo] = useState("A00");
+  const [group, setGroup] = useState(GROUP_OPTIONS[0]);
+  const [region, setRegion] = useState(REGION_OPTIONS[0]);
   const [strategy, setStrategy] = useState<string>("balanced");
   const [saved, setSaved] = useState(false);
   const progress = useMemo(() => ((step + 1) / STEPS.length) * 100, [step]);
@@ -273,13 +279,15 @@ export function OnboardingWizard() {
             <h2 className="text-xl font-semibold text-ink">Bước {step + 1}: {STEPS[step]}</h2>
             <p className="mt-2 text-sm text-body">
               {step === 0 && "Nhập điểm dự kiến và chọn tổ hợp xét tuyển của bạn (ví dụ A00: Toán, Lý, Hóa)."}
-              {step === 1 && "Chọn nhóm ngành bạn yêu thích nhất. Có thể chọn nhiều nhóm."}
+              {step === 1 && "Chọn nhóm ngành bạn yêu thích nhất."}
               {step === 2 && "Chọn khu vực và mức học phí phù hợp với gia đình."}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              {(step === 0 ? ["A00", "A01", "B00", "D01", "C00", "K01"] : step === 1 ? ["Kỹ thuật - Công nghệ", "Kinh tế - Quản trị", "Sức khỏe", "Xã hội - Nhân văn", "Ngoại ngữ"] : ["Hà Nội", "TP.HCM", "Học phí dưới 25 triệu/năm"]).map((o) => (
-                <FilterChip key={o} label={o} />
-              ))}
+              {(step === 0 ? COMBO_OPTIONS : step === 1 ? GROUP_OPTIONS : REGION_OPTIONS).map((o) => {
+                const active = step === 0 ? combo === o : step === 1 ? group === o : region === o;
+                const pick = step === 0 ? setCombo : step === 1 ? setGroup : setRegion;
+                return <FilterChip key={o} label={o} active={active} onToggle={() => pick(o)} />;
+              })}
             </div>
             {step === 0 ? (
               <label className="mt-4 block max-w-xs">
@@ -296,7 +304,7 @@ export function OnboardingWizard() {
               </label>
             ) : null}
           </div>
-        ) : (
+        ) : step === 3 ? (
           <fieldset>
             <legend className="text-xl font-semibold text-ink">Bước 4: Chọn chiến lược nguyện vọng</legend>
             <div className="mt-4 flex flex-col gap-3">
@@ -311,6 +319,44 @@ export function OnboardingWizard() {
               ))}
             </div>
           </fieldset>
+        ) : (
+          <div>
+            <h2 className="text-xl font-semibold text-ink">Bước 5: Xác nhận hồ sơ xét tuyển</h2>
+            <p className="mt-2 text-sm text-body">
+              Kiểm tra lại thông số trước khi xem gợi ý nguyện vọng.
+            </p>
+            <dl className="mt-4 flex flex-col gap-2">
+              {[
+                { label: "Điểm dự kiến", chip: `${score || "—"} / 30`, edit: 0 },
+                { label: "Tổ hợp môn", chip: combo, edit: 0 },
+                { label: "Nhóm ngành", chip: group, edit: 1 },
+                { label: "Khu vực", chip: region, edit: 2 },
+                {
+                  label: "Chiến lược",
+                  chip: STRATEGIES.find((s) => s.value === strategy)?.title ?? strategy,
+                  edit: 3,
+                },
+              ].map((r) => (
+                <div
+                  key={r.label}
+                  className="flex items-center gap-3 rounded-xl border border-line p-3"
+                >
+                  <dt className="w-28 shrink-0 text-[13px] text-muted">{r.label}</dt>
+                  <dd className="min-w-0 flex-1 truncate text-sm font-semibold text-ink">{r.chip}</dd>
+                  <button
+                    type="button"
+                    onClick={() => setStep(r.edit)}
+                    className="shrink-0 rounded-md px-2 py-2 text-[13px] font-semibold text-accent hover:bg-surface-2"
+                  >
+                    Sửa
+                  </button>
+                </div>
+              ))}
+            </dl>
+            <p className="mt-3 text-[13px] text-muted">
+              Dữ liệu chỉ nằm trên trình duyệt của bạn, Compass không thu thập danh tính.
+            </p>
+          </div>
         )}
         <div className="mt-6 flex items-center gap-3">
           {step > 0 ? (
