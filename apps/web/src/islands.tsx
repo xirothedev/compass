@@ -612,6 +612,70 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
   );
 }
 
+/* ---------- Detail: major search + combo filter over CutoffTable ---------- */
+export function DetailMajorFilter({ rows, combos }: { rows: CutoffRow[]; combos: string[] }) {
+  const [query, setQuery] = useState("");
+  const [combo, setCombo] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const filtered = useMemo(() => {
+    const q = deferredQuery.trim().toLowerCase();
+    return rows.filter(
+      (r) =>
+        (!q || r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)) &&
+        (!combo || r.combos.split(",").map((c) => c.trim()).includes(combo)),
+    );
+  }, [rows, deferredQuery, combo]);
+  const hasFilter = query !== "" || combo !== "";
+  return (
+    <div>
+      <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 md:flex-row">
+        <label className="flex-1">
+          <span className="sr-only">Tìm ngành</span>
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Tìm theo mã ngành (IT1, EE2...) hoặc tên chuyên ngành..."
+            className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          />
+        </label>
+        <label className="md:w-48">
+          <span className="sr-only">Tổ hợp</span>
+          <select value={combo} onChange={(e) => setCombo(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            <option value="">Tất cả tổ hợp</option>
+            {combos.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+        {hasFilter ? (
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              setCombo("");
+            }}
+            className="h-11 shrink-0 rounded-lg border border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
+          >
+            Đặt lại
+          </button>
+        ) : null}
+      </div>
+      <p className="mt-3 text-sm text-muted" aria-live="polite">
+        Hiển thị <strong className="tabular-nums text-ink">{filtered.length}</strong> / {rows.length} chương trình đào tạo
+      </p>
+      <div className="mt-3">
+        {filtered.length > 0 ? (
+          <CutoffTable rows={filtered} />
+        ) : (
+          <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
+            Không tìm thấy ngành phù hợp. Thử đổi từ khóa hoặc tổ hợp.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Onboarding: 5-step wizard (ends with Xác nhận hồ sơ) ---------- */
 const STEPS = ["Điểm số & Tổ hợp", "Nhóm ngành yêu thích", "Khu vực & Ngân sách", "Chiến lược", "Xác nhận hồ sơ"] as const;
 const COMBO_OPTIONS = ["A00", "A01", "B00", "D01", "C00", "K01"];
