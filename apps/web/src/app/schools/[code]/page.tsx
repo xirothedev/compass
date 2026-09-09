@@ -25,26 +25,26 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
   const reviews = REVIEWS.filter((r) => r.truong === school.ma);
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
-      <p className="text-xs font-semibold tracking-[0.04em] text-[#006972] uppercase">{school.ma}</p>
-      <h1 className="mt-2 text-[32px] font-bold leading-[40px] tracking-tight text-[#0d2c54]">{school.ten}</h1>
-      <p className="mt-2 text-sm text-[#5c6470]">
+      <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">{school.ma}</p>
+      <h1 className="mt-2 text-[32px] font-bold leading-[40px] tracking-tight text-ink">{school.ten}</h1>
+      <p className="mt-2 text-sm text-muted">
         {school.tenTiengAnh} • {school.diaChi} • {school.loaiHinh}
       </p>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-        <a href="/suggestions" className="inline-flex h-11 items-center justify-center rounded-lg bg-[#00838f] px-6 text-sm font-semibold text-white hover:bg-[#006972]">
+        <a href="/suggestions" className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-6 text-sm font-semibold text-on-cta hover:bg-accent-hover">
           Tạo gợi ý nguyện vọng
         </a>
-        <button type="button" disabled title="Theo dõi trường - sẽ có ở bước sau" className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-lg border border-[#e2e5eb] bg-white px-6 text-sm font-semibold text-[#0d2c54] opacity-60">
+        <button type="button" disabled title="Theo dõi trường - sẽ có ở bước sau" className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-lg border border-line bg-surface px-6 text-sm font-semibold text-ink opacity-60">
           + Thêm vào danh sách theo dõi
         </button>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {school.toHopChuLuc.map((c) => (
-          <span key={c} className="rounded bg-[#e7eefd] px-2 py-1 text-xs font-semibold text-[#0d2c54]">
+          <span key={c} className="rounded bg-chip px-2 py-1 text-xs font-semibold text-ink">
             {c}
           </span>
         ))}
-        <span className="rounded bg-[#eff4ff] px-2 py-1 text-xs text-[#43474e]">Học phí: {school.hocPhi}</span>
+        <span className="rounded bg-surface-2 px-2 py-1 text-xs text-body">Học phí: {school.hocPhi}</span>
       </div>
 
       <Section
@@ -64,15 +64,15 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
         <div className="grid gap-4 md:grid-cols-3">
           {reviews.length > 0 ? (
             reviews.map((r) => (
-              <figure key={r.tacGia} className="rounded-2xl border border-[#e2e5eb] bg-white p-5">
-                <blockquote className="text-sm leading-relaxed text-[#43474e]">“{r.noiDung}”</blockquote>
-                <figcaption className="mt-3 text-[13px] font-semibold text-[#0d2c54]">
-                  {r.tacGia} <span className="font-normal text-[#5c6470]">• {r.vaiTro}</span>
+              <figure key={r.tacGia} className="rounded-2xl border border-line bg-surface p-5">
+                <blockquote className="text-sm leading-relaxed text-body">“{r.noiDung}”</blockquote>
+                <figcaption className="mt-3 text-[13px] font-semibold text-ink">
+                  {r.tacGia} <span className="font-normal text-muted">• {r.vaiTro}</span>
                 </figcaption>
               </figure>
             ))
           ) : (
-            <p className="text-sm text-[#5c6470]">Chưa có review cho trường này. Hãy là người đầu tiên chia sẻ.</p>
+            <p className="text-sm text-muted">Chưa có review cho trường này. Hãy là người đầu tiên chia sẻ.</p>
           )}
         </div>
       </Section>

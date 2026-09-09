@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 const NAV = [
   { href: "/lookup", label: "Tra cứu" },
   { href: "/schools", label: "Trường" },
@@ -6,7 +8,8 @@ const NAV = [
 ];
 
 // ponytail: plain <a> keeps @compass/ui free of a next dependency; header/footer need no client nav
-export function SiteHeader() {
+// ponytail: navy header in both modes (brand anchor + logo is charcoal-on-black, needs dark chrome)
+export function SiteHeader({ actions }: { actions?: ReactNode }) {
   return (
     <header className="sticky top-0 z-40 bg-[#0d2c54] text-white">
       <div className="mx-auto flex h-16 w-full max-w-[1280px] items-center gap-6 px-6">
@@ -22,12 +25,15 @@ export function SiteHeader() {
             </a>
           ))}
         </nav>
-        <a
-          href="/lookup"
-          className="ml-auto hidden h-11 items-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#006972] sm:inline-flex"
-        >
-          Tra cứu thứ hạng
-        </a>
+        <div className="ml-auto flex items-center gap-2">
+          {actions}
+          <a
+            href="/lookup"
+            className="hidden h-11 items-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#006972] sm:inline-flex"
+          >
+            Tra cứu thứ hạng
+          </a>
+        </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto border-t border-white/10 px-4 py-1 md:hidden" aria-label="Chính">
         {[{ href: "/", label: "Trang chủ" }, ...NAV].map((n) => (

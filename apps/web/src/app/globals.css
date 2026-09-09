@@ -1,14 +1,88 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f8f9ff;
   --foreground: #141c26;
+  /* ponytail: semantic tokens flip under .dark; components use these, never raw hex */
+  --canvas: #f8f9ff;
+  --surface: #ffffff;
+  --surface-2: #eff4ff;
+  --line: #e2e5eb;
+  --line-soft: #edf0f5;
+  --ink: #0d2c54;
+  --body: #43474e;
+  --muted: #5c6470;
+  --faint: #74777f;
+  --cta: #0d2c54;
+  --cta-hover: #164075;
+  --on-cta: #ffffff;
+  --accent: #00838f;
+  --accent-hover: #006972;
+  --on-accent: #ffffff;
+  --chip-bg: #e7eefd;
+  --safe-text: #0e6245;
+  --safe-bg: #ebf7f0;
+  --safe-border: #a6e2c3;
+  --match-text: #035388;
+  --match-bg: #ebf5fa;
+  --match-border: #89c2e8;
+  --reach-text: #a04700;
+  --reach-bg: #fff4eb;
+  --reach-border: #f8c899;
+}
+
+.dark {
+  --background: #0b111e;
+  --foreground: #f1f5f9;
+  --canvas: #0b111e;
+  --surface: #1a253c;
+  --surface-2: #131c2e;
+  --line: #334155;
+  --line-soft: #1e293b;
+  --ink: #f1f5f9;
+  --body: #94a3b8;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --cta: #2dd4bf;
+  --cta-hover: #14b8a6;
+  --on-cta: #0b111e;
+  --accent: #2dd4bf;
+  --accent-hover: #14b8a6;
+  --on-accent: #0b111e;
+  --chip-bg: rgba(56, 189, 248, 0.1);
+  --safe-text: #34d399;
+  --safe-bg: #06281e;
+  --safe-border: #0f5132;
+  --match-text: #38bdf8;
+  --match-bg: #08283d;
+  --match-border: #0369a1;
+  --reach-text: #fbbf24;
+  --reach-bg: #2e1c05;
+  --reach-border: #854d0e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-be-vietnam);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
+  --color-on-cta: var(--on-cta);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-chip: var(--chip-bg);
   --color-navy-950: #001736;
   --color-navy-900: #0d2c54;
   --color-navy-700: #164075;
@@ -18,13 +92,6 @@
   --color-teal-600: #00838f;
   --color-teal-100: #8feefc;
   --color-amber-brand: #e08324;
-  --color-canvas: #f8f9ff;
-  --color-card: #ffffff;
-  --color-line: #e2e5eb;
-  --color-line-soft: #edf0f5;
-  --color-ink: #141c26;
-  --color-body: #43474e;
-  --color-muted: #5c6470;
 }
 
 body {

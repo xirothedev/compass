@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 import { SiteFooter, SiteHeader } from "@compass/ui";
+import { ThemeToggle } from "../islands";
+import { Providers } from "../providers";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -18,11 +20,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="vi" className={`${beVietnamPro.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-[#f8f9ff] font-sans text-[#141c26]">
-        <SiteHeader />
-        <main className="flex flex-1 flex-col">{children}</main>
-        <SiteFooter />
+    <html lang="vi" className={`${beVietnamPro.variable} h-full antialiased`} suppressHydrationWarning>
+      <body className="flex min-h-full flex-col bg-canvas font-sans text-ink">
+        <Providers>
+          <SiteHeader actions={<ThemeToggle />} />
+          <main className="flex flex-1 flex-col">{children}</main>
+          <SiteFooter />
+        </Providers>
       </body>
     </html>
   );
