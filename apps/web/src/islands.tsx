@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, RANK_TOTAL, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
+import { NGANHS } from "./mocks";
 import { useProfile } from "./profile";
 
 /* ---------- Theme toggle (header) ---------- */
@@ -693,9 +694,23 @@ export function OnboardingWizard() {
   const { score, combo, group, region, strategy } = profile;
   const [saved, setSaved] = useState(false);
   const progress = useMemo(() => ((step + 1) / STEPS.length) * 100, [step]);
+  const matchCount = useMemo(
+    () => NGANHS.filter((n) => n.toHop.includes(combo)).length,
+    [combo],
+  );
+  const strategyTitle = STRATEGIES.find((s) => s.value === strategy)?.title ?? strategy;
   return (
-    <div className="mx-auto w-full max-w-3xl">
-      <ol className="flex gap-2" aria-label="Tiến trình khảo sát">
+    <div className="mx-auto w-full max-w-5xl">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-ink">
+          Tiến trình khảo sát [Bước {step + 1}/{STEPS.length}]
+        </p>
+        <p className="text-sm tabular-nums text-muted">Hoàn thành {Math.round(progress)}%</p>
+      </div>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-line-soft" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến trình khảo sát">
+        <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
+      </div>
+      <ol className="mt-3 flex gap-2" aria-label="Các bước khảo sát">
         {STEPS.map((s, i) => (
           <li key={s} className="flex-1">
             <span className={`block h-2 rounded-full ${i <= step ? "bg-accent" : "bg-line"}`} />
@@ -703,7 +718,8 @@ export function OnboardingWizard() {
           </li>
         ))}
       </ol>
-      <div className="mt-6 rounded-2xl border border-line bg-surface p-6 md:p-8" aria-live="polite">
+      <div className="mt-6 grid gap-6 lg:grid-cols-12">
+        <div className="rounded-2xl border border-line bg-surface p-6 md:p-8 lg:col-span-8" aria-live="polite">
         {step < 3 ? (
           <div>
             <h2 className="text-xl font-semibold text-ink">Bước {step + 1}: {STEPS[step]}</h2>
@@ -811,6 +827,39 @@ export function OnboardingWizard() {
           )}
         </div>
         <span className="sr-only">{Math.round(progress)}% hoàn thành</span>
+        </div>
+        <aside className="h-fit rounded-2xl border border-line bg-surface p-5 lg:col-span-4 lg:sticky lg:top-32" aria-label="Tóm tắt hồ sơ thí sinh">
+          <h2 className="text-base font-semibold text-ink">Tóm tắt hồ sơ Thí sinh</h2>
+          <dl className="mt-3 flex flex-col gap-2 text-sm">
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Tổ hợp môn</dt>
+              <dd className="font-bold text-ink">{combo}</dd>
+            </div>
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Điểm dự kiến</dt>
+              <dd className="font-bold tabular-nums text-ink">{score || "—"}/30.00</dd>
+            </div>
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Nhóm ngành</dt>
+              <dd className="text-right font-semibold text-ink">{group}</dd>
+            </div>
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Khu vực</dt>
+              <dd className="text-right font-semibold text-ink">{region}</dd>
+            </div>
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Chiến lược</dt>
+              <dd className="text-right font-semibold text-ink">{strategyTitle}</dd>
+            </div>
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Ngành hợp tổ hợp</dt>
+              <dd className="font-bold tabular-nums text-ink">~{matchCount}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-[13px] leading-relaxed text-muted">
+            Hồ sơ cập nhật theo từng lựa chọn của bạn ở khung bên trái.
+          </p>
+        </aside>
       </div>
     </div>
   );

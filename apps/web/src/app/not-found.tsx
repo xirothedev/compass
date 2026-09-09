@@ -11,7 +11,10 @@ const QUICK_LINKS = [
 export default function NotFound() {
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col items-center justify-center px-6 py-16 text-center md:py-24">
-      <p className="text-[80px] font-bold leading-none tracking-tight tabular-nums text-ink md:text-[120px]">
+      <p className="rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-muted">
+        Lỗi điều hướng 404 · HTTP Not Found
+      </p>
+      <p className="mt-4 text-[80px] font-bold leading-none tracking-tight tabular-nums text-ink md:text-[120px]">
         404
       </p>
       <h1 className="mt-4 text-2xl font-semibold text-ink md:text-[30px]">Không tìm thấy trang</h1>
@@ -32,7 +35,8 @@ export default function NotFound() {
           Tra cứu thứ hạng
         </Link>
       </div>
-      <nav aria-label="Liên kết hữu ích" className="mt-10 flex flex-wrap justify-center gap-2">
+      <p className="mt-10 text-xs font-semibold tracking-[0.04em] text-muted uppercase">Lối tắt tra cứu phổ biến</p>
+      <nav aria-label="Liên kết hữu ích" className="mt-3 flex flex-wrap justify-center gap-2">
         {QUICK_LINKS.map((l) => (
           <Link
             key={l.href}

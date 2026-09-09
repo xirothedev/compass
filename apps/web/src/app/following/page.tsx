@@ -1,20 +1,42 @@
-import { TRUONGS, toCard } from "../../mocks";
+import Link from "next/link";
+import { TRUONGS, NGANHS, toCard } from "../../mocks";
 import { FollowingList } from "../../islands";
 
 export const metadata = { title: "Danh sách theo dõi - Compass" };
 
 export default function FollowingPage() {
+  const cards = TRUONGS.map(toCard);
+  const majors = NGANHS.length;
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
-      <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">Quan tâm</p>
+      <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
+        <Link href="/" className="hover:text-ink">Trang chủ</Link>
+        <span aria-hidden> / </span>
+        <span aria-current="page" className="text-ink">Danh sách theo dõi</span>
+      </nav>
+      <p className="mt-2 text-xs font-semibold tracking-[0.04em] text-accent uppercase">Quản lý quan tâm · Lưu tự động trên thiết bị</p>
       <h1 className="mt-2 text-[32px] font-bold leading-[40px] tracking-tight text-ink">
         Danh sách theo dõi
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
-        Các trường bạn lưu để đối chiếu điểm chuẩn và tạo gợi ý nguyện vọng.
+        Các trường bạn lưu để đối chiếu điểm chuẩn và tạo gợi ý nguyện vọng. Tổng hợp từ {majors} mã ngành trong dữ liệu mẫu.
       </p>
       <div className="mt-8">
-        <FollowingList schools={TRUONGS.map(toCard)} />
+        <FollowingList schools={cards} />
+      </div>
+      <div className="mt-10 flex flex-col gap-4 rounded-2xl bg-[#001736] p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
+        <div>
+          <h2 className="text-xl font-semibold">Đặt các trường lên bàn cân để chọn chiến lược tối ưu nhất</h2>
+          <p className="mt-1 text-sm text-white/75">
+            Mở catalog để thêm trường vào danh sách, rồi đối chiếu điểm chuẩn 3 năm.
+          </p>
+        </div>
+        <Link
+          href="/schools"
+          className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#00838f] px-6 text-sm font-semibold text-white hover:bg-[#006972]"
+        >
+          Duyệt thêm trường
+        </Link>
       </div>
     </div>
   );
