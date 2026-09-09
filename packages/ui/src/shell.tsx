@@ -47,27 +47,35 @@ export function SiteHeader({ actions }: { actions?: ReactNode }) {
   );
 }
 
-const FOOT_LINKS = ["Quy chế thi THPTQG", "Phương pháp tính điểm chuẩn", "Cơ sở dữ liệu các trường"];
+const FOOT_LINKS = [
+  "Quy chế thi THPTQG",
+  "Phương pháp tính điểm chuẩn",
+  "Cơ sở dữ liệu các trường",
+  "Hỗ trợ sĩ tử & Phụ huynh",
+];
 
 export function SiteFooter() {
   return (
-    <footer className="bg-[#001736] text-white">
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-6 px-6 py-10 md:flex-row md:items-start md:justify-between">
-        <div className="max-w-md">
-          <p className="text-base font-bold">Compass</p>
-          <p className="mt-2 text-sm leading-relaxed text-white/70">
-            Compass là nền tảng hỗ trợ tham khảo định hướng nguyện vọng cho thí sinh kỳ thi THPTQG.
-          </p>
+    <footer className="bg-surface-2">
+      <div className="mx-auto w-full max-w-[1280px] px-6 pt-10">
+        <p className="rounded-xl border border-line bg-surface p-4 text-sm leading-relaxed text-body">
+          Compass là nền tảng hỗ trợ tham khảo định hướng nguyện vọng THPTQG phi lợi nhuận.
+          Điểm số và thứ hạng chỉ mang tính tham khảo — thí sinh đối chiếu quy chế tuyển sinh chính thức của Bộ GD&ĐT.
+        </p>
+      </div>
+      <div className="mt-6 bg-[#001736] text-white">
+        <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm text-white/70">© 2025 Compass THPT. Học viện Công nghệ Giáo dục.</p>
+          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            {FOOT_LINKS.map((l) => (
+              <li key={l}>
+                <a href="/schools" className="text-white/70 hover:text-white">
+                  {l}
+                </a>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="flex flex-col gap-2 text-sm">
-          {FOOT_LINKS.map((l) => (
-            <li key={l}>
-              <a href="/schools" className="text-white/70 hover:text-white">
-                {l}
-              </a>
-            </li>
-          ))}
-        </ul>
       </div>
     </footer>
   );
