@@ -12,7 +12,8 @@
   "files": ["dist"],
   "scripts": {
     "build": "tsc",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "tsc && node --test test/*.test.cjs"
   },
   "peerDependencies": {
     "react": "^19",

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CutoffTable, Section, TierBadge } from "@compass/ui";
 import { classifyBucket } from "@compass/ui";
 import { CURRENT_USER, REVIEWS, TRUONGS, getNganhsByTruong, getTruong } from "../../../mocks";
+import { getCutoffsBySchool, getReviewsBySchool } from "../../../data";
 import { FollowButton } from "../../../islands";
 
 export function generateStaticParams() {
@@ -12,7 +13,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
   const { code } = await params;
   const school = getTruong(code);
   if (!school) notFound();
-  const majors = getNganhsByTruong(school.ma);
+  const majors = (await getCutoffsBySchool(school.ma)) ?? getNganhsByTruong(school.ma);
   const rows = majors.map((m) => ({
     code: m.maNganh,
     name: m.ten,
@@ -23,7 +24,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
     y2024: m.diemChuan.y2024,
     tier: classifyBucket(CURRENT_USER.diem - m.diemChuan.y2024),
   }));
-  const reviews = REVIEWS.filter((r) => r.truong === school.ma);
+  const reviews = (await getReviewsBySchool(school.ma)) ?? REVIEWS.filter((r) => r.truong === school.ma);
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
       <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">{school.ma}</p>
