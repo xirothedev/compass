@@ -19,22 +19,25 @@ export function FilterChip({
   label,
   active = false,
   onToggle,
+  dotClassName,
 }: {
   label: string;
   active?: boolean;
   onToggle?: () => void;
+  dotClassName?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-pressed={active}
-      className={`min-h-[44px] shrink-0 rounded-full border px-4 text-[13px] font-medium transition-colors md:min-h-0 md:h-8 md:px-3.5 ${
+      className={`inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-colors md:min-h-0 md:h-8 md:px-3.5 ${
         active
           ? "border-transparent bg-accent text-on-accent"
           : "border-line bg-surface text-ink hover:bg-surface-2"
       }`}
     >
+      {dotClassName ? <span aria-hidden className={`size-2 shrink-0 rounded-full ${dotClassName}`} /> : null}
       {label}
     </button>
   );
@@ -59,16 +62,16 @@ const TREND = { up: "↗ tăng", flat: "→ ổn định", down: "↘ giảm" } 
 export function SchoolCard({ school }: { school: SchoolCardData }) {
   const detail = `/schools/${school.code.toLowerCase()}`;
   return (
-    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 transition-shadow hover:shadow-[0_4px_12px_rgba(13,44,84,0.08)]">
+    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 shadow-sm transition-shadow hover:shadow-[0_4px_12px_rgba(13,44,84,0.08)]">
       <div className="flex items-start gap-3">
-        <span className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-cta text-on-cta">
+        <span className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-[#001736] text-white shadow-sm dark:bg-white dark:text-black">
           <span className="text-sm font-bold">{school.code.slice(0, 3)}</span>
           <span className="text-[10px] opacity-80">{school.region ?? ""}</span>
         </span>
         <div className="min-w-0">
           <div className="flex flex-wrap gap-1.5">
             {[school.kind, school.region].filter(Boolean).map((b) => (
-              <span key={b} className="rounded bg-chip px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+              <span key={b} className="rounded bg-[var(--secondary-container)] px-1.5 py-0.5 text-[11px] font-semibold text-[var(--on-secondary-container)] dark:text-white">
                 {b}
               </span>
             ))}
@@ -102,12 +105,12 @@ export function SchoolCard({ school }: { school: SchoolCardData }) {
         ) : null}
       </div>
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-line-soft pt-3">
-        <a href="/suggestions" className="text-sm font-semibold text-accent hover:underline">
+        <a href={`/suggestions?school=${school.code}`} className="text-sm font-semibold text-accent hover:underline">
           Gợi ý nguyện vọng tại trường
         </a>
         <a
           href={detail}
-          className="inline-flex h-11 items-center rounded-lg bg-cta px-4 text-sm font-semibold text-on-cta hover:bg-cta-hover"
+          className="inline-flex h-11 items-center rounded-lg bg-[#001736] px-4 text-sm font-semibold text-white shadow-sm hover:bg-[#0d2c54] dark:bg-white dark:text-black"
         >
           Chi tiết &amp; Điểm chuẩn →
         </a>

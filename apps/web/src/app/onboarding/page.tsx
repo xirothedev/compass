@@ -5,7 +5,7 @@ export const metadata = { title: "Khảo sát Định hướng Nguyện vọng -
 
 export default function OnboardingPage() {
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Breadcrumb" className="text-center text-[13px] text-muted">
         <Link href="/" className="hover:text-ink">Trang chủ</Link>
         <span aria-hidden> / </span>
@@ -13,12 +13,12 @@ export default function OnboardingPage() {
       </nav>
       <div className="mt-2 flex flex-wrap justify-center gap-2">
         {["Chuẩn hóa GDPT 2018 & 2006", "Bảo mật ADR-0004: Không thu thập SBD", "Thuật toán phân tích Phổ điểm 2025"].map((b) => (
-          <span key={b} className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-accent">
+          <span key={b} className="rounded-full bg-[var(--secondary-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
             {b}
           </span>
         ))}
       </div>
-      <h1 className="mx-auto mt-3 max-w-2xl text-center text-[32px] font-bold leading-[40px] tracking-tight text-ink">
+      <h1 className="mx-auto mt-3 max-w-2xl text-center text-[32px] font-bold leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-[48px]">
         Khảo sát định hướng nguyện vọng thông minh
       </h1>
       <p className="mx-auto mt-3 max-w-xl text-center text-base leading-relaxed text-body">

@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, RANK_TOTAL, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
 import { NGANHS } from "./mocks";
 import { useProfile } from "./profile";
@@ -270,36 +270,39 @@ export function SuggestionList({
   }, [sorted, bucket]);
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label htmlFor="sort" className="text-sm font-medium text-ink">
-          Sắp xếp:
-        </label>
-        <select
-          id="sort"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as typeof sort)}
-          className="h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus:border-accent focus:outline-none"
-        >
-          {SORTS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
+      <div className="sticky top-16 z-30 -mx-1 bg-canvas/95 px-1 py-2 shadow-[0_1px_8px_rgba(13,44,84,0.06)] backdrop-blur">
+        <div className="flex flex-wrap items-center gap-3">
+          <label htmlFor="sort" className="text-sm font-medium text-ink">
+            Sắp xếp:
+          </label>
+          <select
+            id="sort"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+            className="h-11 rounded-lg border border-line bg-surface px-3 text-sm text-ink focus:border-accent focus:outline-none"
+          >
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <VirtualFilterTip />
+          <ReorderModal items={sorted} />
+          <ExportCsv rows={sorted} />
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lọc theo giỏ">
+          <FilterChip label={`Tất cả 3 giỏ (${sorted.length})`} active={bucket === "all"} onToggle={() => setBucket("all")} />
+          {(["reach", "match", "safe"] as Bucket[]).map((t) => (
+            <FilterChip
+              key={t}
+              label={`${BUCKET_META[t].label} (${counts[t]})`}
+              dotClassName={BUCKET_META[t].dot}
+              active={bucket === t}
+              onToggle={() => setBucket(bucket === t ? "all" : t)}
+            />
           ))}
-        </select>
-        <VirtualFilterTip />
-        <ReorderModal items={sorted} />
-        <ExportCsv rows={sorted} />
-      </div>
-      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Lọc theo giỏ">
-        <FilterChip label={`Tất cả 3 giỏ (${sorted.length})`} active={bucket === "all"} onToggle={() => setBucket("all")} />
-        {(["reach", "match", "safe"] as Bucket[]).map((t) => (
-          <FilterChip
-            key={t}
-            label={`${BUCKET_META[t].label} (${counts[t]})`}
-            active={bucket === t}
-            onToggle={() => setBucket(bucket === t ? "all" : t)}
-          />
-        ))}
+        </div>
       </div>
       {groups.length === 0 ? (
         <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
@@ -373,6 +376,10 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
     setPriority("0.00");
   };
   const names = COMBO_SUBJECTS[combo];
+  // ponytail: live preview from client total mirrors Stitch (always-filled right column);
+  // server state wins when live distribution answers.
+  const liveRank = interpRank(total);
+  const display = state ?? { score: total, combo, rank: liveRank, percentile: rankPercentile(liveRank) };
   return (
     <div className="grid gap-6 lg:grid-cols-12">
       <div className="flex flex-col gap-4 lg:col-span-5">
@@ -494,16 +501,16 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
               ↺
             </button>
           </div>
-        </form>
 
-        <div className="rounded-2xl border border-line bg-surface p-5">
-          <p className="text-sm font-semibold text-ink">Lưu ý về quy chế tính điểm 2025</p>
-          <p className="mt-1 text-[13px] leading-relaxed text-body">
-            Với mức tổng điểm từ 22.50 trở lên, điểm ưu tiên được tính giảm dần theo công thức{" "}
-            <code className="rounded bg-surface-2 px-1 font-mono">[(30 - Tổng điểm)/7.5] × Mức ưu tiên</code>.
-            Nhập điểm ưu tiên thực tế của bạn để tổng điểm chính xác.
-          </p>
-        </div>
+          <div className="mt-4 rounded-xl bg-surface-2 p-4">
+            <p className="text-sm font-semibold text-ink">Lưu ý về quy chế tính điểm 2025</p>
+            <p className="mt-1 text-[13px] leading-relaxed text-body">
+              Với mức tổng điểm từ 22.50 trở lên, điểm ưu tiên được tính giảm dần theo công thức{" "}
+              <code className="rounded bg-surface px-1 font-mono">[(30 - Tổng điểm)/7.5] × Mức ưu tiên</code>.
+              Nhập điểm ưu tiên thực tế của bạn để tổng điểm chính xác.
+            </p>
+          </div>
+        </form>
       </div>
 
       <div className="flex flex-col gap-4 lg:col-span-7">
@@ -511,44 +518,40 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
           Ước tính vị trí phân vị tổ hợp {combo} toàn quốc
         </p>
         <div className="overflow-hidden rounded-2xl bg-[#0d2c54] p-6 text-white" aria-live="polite">
-          {state ? (
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-5">
-                <Dial value={100 - state.percentile} />
-                <div>
-                  <p className="text-sm text-white/70">
-                    Điểm {state.score.toFixed(2)} · Tổ hợp {state.combo}
-                  </p>
-                  <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
-                    Hạng ~{state.rank.toLocaleString("vi-VN")}
-                  </p>
-                  <p className="mt-1 text-sm text-white/85">
-                    / 900.000 thí sinh · Top {state.percentile.toFixed(1)}% toàn quốc
-                  </p>
-                </div>
-              </div>
-              <TierBadge
-                tier={state.percentile <= 5 ? "safe" : state.percentile <= 20 ? "match" : "reach"}
-                className="self-start border-white/20"
-              />
-              <div className="flex flex-col gap-2 border-t border-white/15 pt-4 sm:flex-row">
-                <Link
-                  href={`/suggestions?score=${state.score.toFixed(2)}&combo=${encodeURIComponent(state.combo)}`}
-                  className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
-                >
-                  Xem gợi ý nguyện vọng
-                </Link>
-                <Link
-                  href="/schools"
-                  className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-white/60 px-5 text-sm font-semibold text-white hover:bg-white/10"
-                >
-                  So sánh điểm chuẩn
-                </Link>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-5">
+              <Dial value={100 - display.percentile} />
+              <div>
+                <p className="text-sm text-white/70">
+                  Điểm {display.score.toFixed(2)} · Tổ hợp {display.combo}
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
+                  Hạng ~{display.rank.toLocaleString("vi-VN")}
+                </p>
+                <p className="mt-1 text-sm text-white/85">
+                  / 900.000 thí sinh · Top {display.percentile.toFixed(1)}% toàn quốc
+                </p>
               </div>
             </div>
-          ) : (
-            <p className="text-sm text-white/75">Nhập điểm thành phần rồi bấm Phân tích để xem thứ hạng ước tính của bạn.</p>
-          )}
+            <TierBadge
+              tier={display.percentile <= 5 ? "safe" : display.percentile <= 20 ? "match" : "reach"}
+              className="self-start border-white/20"
+            />
+            <div className="flex flex-col gap-2 border-t border-white/15 pt-4 sm:flex-row">
+              <Link
+                href={`/suggestions?score=${display.score.toFixed(2)}&combo=${encodeURIComponent(display.combo)}`}
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
+              >
+                Xem gợi ý nguyện vọng
+              </Link>
+              <Link
+                href="/schools"
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-white/60 px-5 text-sm font-semibold text-white hover:bg-white/10"
+              >
+                So sánh điểm chuẩn
+              </Link>
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-line bg-surface p-5">
@@ -586,28 +589,30 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
           </div>
         </div>
 
-        {state ? (
-          <div className="rounded-2xl border border-line bg-surface p-5">
-            <h3 className="text-base font-semibold text-ink">Phân tích chi tiết mức độ cạnh tranh</h3>
-            <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
-              {[
-                ["Bằng hoặc cao hơn bạn", `~${state.rank.toLocaleString("vi-VN")}`, `Top ${state.percentile.toFixed(1)}%`],
-                ["Thấp hơn điểm của bạn", `~${(RANK_TOTAL - state.rank).toLocaleString("vi-VN")}`, "thí sinh đã vượt qua"],
-                ["Tổng mẫu phân tích", "900.000", "thí sinh cả nước"],
-              ].map(([l, v, s]) => (
-                <div key={l} className="rounded-lg bg-surface-2 p-3">
-                  <dt className="text-[11px] text-muted">{l}</dt>
-                  <dd className="mt-1 text-base font-bold tabular-nums text-ink">{v}</dd>
-                  <dd className="text-[11px] text-muted">{s}</dd>
-                </div>
-              ))}
-            </dl>
-            <p className="mt-3 text-[13px] leading-relaxed text-muted">
-              Phương pháp luận: mô phỏng nội suy từ điểm mốc phổ điểm. Compass không thu thập hay lưu trữ Số báo
-              danh (SBD).
-            </p>
-          </div>
-        ) : null}
+        <div className="rounded-2xl border border-line bg-surface p-5">
+          <h3 className="text-base font-semibold text-ink">Phân tích chi tiết mức độ cạnh tranh</h3>
+          <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+            {[
+              ["Bằng hoặc cao hơn bạn", `~${display.rank.toLocaleString("vi-VN")}`, `Top ${display.percentile.toFixed(1)}%`],
+              ["Thấp hơn điểm của bạn", `~${(RANK_TOTAL - display.rank).toLocaleString("vi-VN")}`, "thí sinh đã vượt qua"],
+              ["Tổng mẫu phân tích", "900.000", "thí sinh cả nước"],
+            ].map(([l, v, s]) => (
+              <div key={l} className="rounded-lg bg-surface-2 p-3">
+                <dt className="text-[11px] text-muted">{l}</dt>
+                <dd className="mt-1 text-base font-bold tabular-nums text-ink">{v}</dd>
+                <dd className="text-[11px] text-muted">{s}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="mt-3 text-[13px] leading-relaxed text-muted">
+            Thứ hạng càng nhỏ càng tốt. Đối chiếu thứ hạng với chỉ tiêu và điểm chuẩn 3 năm của ngành
+            mục tiêu; phổ điểm mỗi năm dao động theo độ khó đề thi và chương trình (CT2018 / CT2006).
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            Phương pháp luận: mô phỏng nội suy từ điểm mốc phổ điểm. Compass không thu thập hay lưu trữ Số báo
+            danh (SBD).
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -706,9 +711,6 @@ export function OnboardingWizard() {
           Tiến trình khảo sát [Bước {step + 1}/{STEPS.length}]
         </p>
         <p className="text-sm tabular-nums text-muted">Hoàn thành {Math.round(progress)}%</p>
-      </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-line-soft" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label="Tiến trình khảo sát">
-        <span className="block h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
       </div>
       <ol className="mt-3 flex gap-2" aria-label="Các bước khảo sát">
         {STEPS.map((s, i) => (

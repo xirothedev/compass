@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex min-h-full flex-col bg-canvas font-sans text-ink">
         <Providers>
           <SiteHeader actions={<ThemeToggle />} />
-          <main className="flex flex-1 flex-col">{children}</main>
+          <main className="flex flex-1 flex-col pt-16">{children}</main>
           <SiteFooter />
         </Providers>
       </body>

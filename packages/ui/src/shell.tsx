@@ -9,39 +9,43 @@ const NAV = [
 ];
 
 // ponytail: plain <a> keeps @compass/ui free of a next dependency; header/footer need no client nav.
-// ponytail: light blur header mirrors Stitch (white/95); logo swaps navy/white via .dark.
+// ponytail: header mirrors Stitch home.html (bg-surface/90, surface-container search, secondary-container badge, primary avatar).
 export function SiteHeader({ actions }: { actions?: ReactNode }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur">
-      <div className="mx-auto flex h-16 w-full max-w-[1280px] items-center gap-4 px-6">
-        <a href="/" className="flex shrink-0 items-center gap-2" aria-label="Compass - Trang chủ">
+    <header className="fixed top-0 right-0 left-0 z-50 bg-surface/90 shadow-[0_1px_8px_rgba(13,44,84,0.06)] backdrop-blur-md">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-4 px-4 md:px-8 lg:px-12">
+        <a href="/" className="flex shrink-0 items-center gap-3" aria-label="Compass - Trang chủ">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo/compass-mark-navy.webp" alt="" width={32} height={32} className="size-8 dark:hidden" />
+          <img src="/logo/compass-mark-navy.webp" alt="" width={32} height={32} className="h-8 w-auto object-contain dark:hidden" />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo/compass-mark-white.webp" alt="" width={32} height={32} className="hidden size-8 dark:block" />
-          <span className="text-lg font-bold tracking-tight text-ink">Compass</span>
-          <span className="rounded border border-line px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-muted">
-            THPT
+          <img src="/logo/compass-mark-white.webp" alt="" width={32} height={32} className="hidden h-8 w-auto object-contain dark:block" />
+          <span className="flex items-center gap-2">
+            <span className="text-lg font-semibold tracking-tight text-ink">Compass</span>
+            <span className="rounded-full bg-[var(--primary-fixed)] px-2 py-0.5 text-[11px] font-semibold tracking-wide text-[#001b3d] uppercase dark:text-white">
+              THPT
+            </span>
           </span>
         </a>
-        <nav className="ml-2 hidden items-center gap-1 lg:flex" aria-label="Chính">
+        <nav className="hidden items-center gap-1 lg:flex" aria-label="Chính">
           {NAV.map((n) => (
-            <a key={n.href} href={n.href} className="rounded-md px-3 py-2 text-sm font-medium text-muted hover:bg-surface-2 hover:text-ink">
+            <a key={n.href} href={n.href} className="rounded-lg px-3 py-1.5 text-sm font-medium text-body hover:bg-[var(--surface-container)] hover:text-ink">
               {n.label}
             </a>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2.5">
           <a
             href="/schools"
-            className="hidden h-10 w-60 items-center gap-2 rounded-lg border border-line bg-surface px-3 text-sm text-faint hover:bg-surface-2 md:flex"
+            className="hidden items-center gap-2 rounded-lg bg-[var(--surface-container)] px-2.5 py-1 text-sm text-body sm:flex"
           >
-            <span className="flex-1 truncate">Tìm ngành, trường...</span>
-            <kbd className="rounded border border-line bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">
+            <span aria-hidden>⌕</span>
+            <span className="text-faint">Tìm ngành, trường...</span>
+            <kbd className="rounded bg-surface px-1.5 py-0.5 text-[11px] text-body shadow-[0_1px_2px_rgba(0,0,0,0.08)]">
               ⌘K
             </kbd>
           </a>
-          <span className="hidden rounded-full bg-chip px-2.5 py-1 text-xs font-semibold text-accent xl:block">
+          <span className="hidden items-center gap-1.5 rounded-full bg-[var(--secondary-container)] px-3 py-1 text-xs font-semibold text-[var(--on-secondary-container)] xl:inline-flex dark:text-white">
+            <span className="size-1.5 rounded-full bg-[var(--accent)]" aria-hidden />
             Kỳ thi 2025
           </span>
           {actions}
@@ -49,7 +53,7 @@ export function SiteHeader({ actions }: { actions?: ReactNode }) {
             href="/onboarding"
             title="Hồ sơ của bạn"
             aria-label="Hồ sơ của bạn"
-            className="flex size-10 items-center justify-center rounded-full bg-cta text-sm font-bold text-on-cta"
+            className="flex size-8 items-center justify-center rounded-full bg-[#001736] text-sm font-bold text-white dark:bg-white dark:text-black"
           >
             TS
           </a>

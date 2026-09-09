@@ -26,21 +26,21 @@ export default async function SchoolsPage({
   const groups = [...new Set(TRUONGS.flatMap((t) => t.nhomNganh))];
   const kinds = [...new Set(TRUONGS.map((t) => t.loaiHinh))];
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
         <Link href="/" className="hover:text-ink">Trang chủ</Link>
         <span aria-hidden> / </span>
         <span aria-current="page" className="text-ink">Danh mục Trường &amp; Điểm chuẩn</span>
       </nav>
       <div className="mt-2 flex flex-wrap gap-2">
-        <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-accent">
+        <span className="rounded-full bg-[var(--secondary-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
           Tuyển sinh Đại học 2025
         </span>
-        <span className="rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold text-accent">
+        <span className="rounded-full bg-[var(--secondary-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
           Cập nhật Đề án mới nhất
         </span>
       </div>
-      <h1 className="mt-3 text-[32px] font-bold leading-[40px] tracking-tight text-ink">
+      <h1 className="mt-3 text-[32px] font-bold leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-[48px]">
         Danh mục Trường &amp; Điểm chuẩn Đại học
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
@@ -63,7 +63,7 @@ export default async function SchoolsPage({
       <div className="mt-8">
         <SchoolFilters schools={schools} regions={regions} groups={groups} kinds={kinds} initialQuery={q} />
       </div>
-      <div className="mt-10 flex flex-col gap-4 rounded-2xl bg-[#001736] p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
+      <div className="mt-10 flex flex-col gap-4 rounded-3xl bg-[#001736] p-8 text-white shadow-xl md:flex-row md:items-center md:justify-between md:p-12">
         <div>
           <h2 className="text-xl font-semibold">Chưa rõ điểm thi của bạn phù hợp với Trường nào?</h2>
           <p className="mt-1 text-sm text-white/75">
@@ -73,7 +73,7 @@ export default async function SchoolsPage({
         <div className="flex flex-col gap-2 sm:flex-row">
           <Link
             href="/lookup"
-            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
+            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#006972] px-5 text-sm font-semibold text-white hover:bg-[#00838f]"
           >
             Tra cứu Thứ hạng điểm
           </Link>
