@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { BUCKET_META, CutoffTable, FilterChip, SchoolCard, TierBadge, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
 import { useProfile } from "./profile";
 
@@ -242,12 +242,31 @@ export function SuggestionList({
   score: number;
 }) {
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recommended");
+  const [bucket, setBucket] = useState<"all" | Bucket>("all");
   const sorted = useMemo(() => {
     const arr = [...rows];
     if (sort === "cutoff-desc") arr.sort((a, b) => b.y2024 - a.y2024);
     if (sort === "delta-desc") arr.sort((a, b) => (deltas[b.code] ?? 0) - (deltas[a.code] ?? 0));
     return arr;
   }, [rows, deltas, sort]);
+  const counts = useMemo(() => {
+    const c: Record<Bucket, number> = { reach: 0, match: 0, safe: 0 };
+    for (const r of sorted) c[r.tier] += 1;
+    return c;
+  }, [sorted]);
+  const groups: { tier: Bucket; rows: CutoffRow[]; offset: number }[] = useMemo(() => {
+    const order: Bucket[] = ["reach", "match", "safe"];
+    let offset = 0;
+    const out: { tier: Bucket; rows: CutoffRow[]; offset: number }[] = [];
+    for (const tier of order) {
+      if (bucket !== "all" && bucket !== tier) continue;
+      const gr = sorted.filter((r) => r.tier === tier);
+      if (gr.length === 0) continue;
+      out.push({ tier, rows: gr, offset });
+      offset += gr.length;
+    }
+    return out;
+  }, [sorted, bucket]);
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -270,7 +289,36 @@ export function SuggestionList({
         <ReorderModal items={sorted} />
         <ExportCsv rows={sorted} />
       </div>
-      <CutoffTable rows={sorted} />
+      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Lọc theo giỏ">
+        <FilterChip label={`Tất cả 3 giỏ (${sorted.length})`} active={bucket === "all"} onToggle={() => setBucket("all")} />
+        {(["reach", "match", "safe"] as Bucket[]).map((t) => (
+          <FilterChip
+            key={t}
+            label={`${BUCKET_META[t].label} (${counts[t]})`}
+            active={bucket === t}
+            onToggle={() => setBucket(bucket === t ? "all" : t)}
+          />
+        ))}
+      </div>
+      {groups.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
+          Không tìm thấy nguyện vọng nào phù hợp với bộ lọc.{" "}
+          <button type="button" onClick={() => setBucket("all")} className="font-semibold text-accent hover:underline">
+            Đặt lại bộ lọc
+          </button>
+        </p>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {groups.map((g) => (
+            <section key={g.tier} aria-label={BUCKET_META[g.tier].label}>
+              <BucketHeader tier={g.tier} count={g.rows.length} />
+              <div className="mt-3">
+                <CutoffTable rows={g.rows} rankOffset={g.offset} />
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
       <p className="mt-3 text-[13px] tabular-nums text-muted">
         Độ dư = điểm của bạn ({score.toFixed(2)}) trừ điểm chuẩn 2024.
       </p>

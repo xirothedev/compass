@@ -125,19 +125,54 @@ export type CutoffRow = {
   y2023: number;
   y2024: number;
   tier: Bucket;
+  delta?: number;
 };
 
-// ponytail: mobile-first cards + md table share one rows array; no JS breakpoint needed
-export function CutoffTable({ rows }: { rows: CutoffRow[] }) {
+export const BUCKET_RANGE: Record<Bucket, string> = {
+  reach: "Xác suất 25% - 50%",
+  match: "Xác suất 50% - 85%",
+  safe: "Xác suất > 85%",
+};
+
+export function BucketHeader({ tier, count }: { tier: Bucket; count: number }) {
+  const m = BUCKET_META[tier];
+  return (
+    <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border p-4 ${m.bg} ${m.border}`}>
+      <TierBadge tier={tier} className="border-transparent bg-white/60" />
+      <h3 className={`text-base font-semibold ${m.text}`}>
+        {tier === "reach"
+          ? "Nhóm Nguyện vọng Thử thách"
+          : tier === "match"
+            ? "Nhóm Nguyện vọng Vừa sức"
+            : "Nhóm Nguyện vọng An toàn"}
+      </h3>
+      <span className={`text-[13px] font-semibold tabular-nums ${m.text}`}>{BUCKET_RANGE[tier]}</span>
+      <span className={`w-full text-[13px] tabular-nums ${m.text}`}>{count} nguyện vọng</span>
+    </div>
+  );
+}
+
+// ponytail: mobile-first cards + md table share one rows array; no JS breakpoint needed.
+// Delta column appears only when rows carry it (suggestions, not detail).
+export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankOffset?: number }) {
+  const showDelta = rows.some((r) => typeof r.delta === "number");
+  const head = ["Mã ngành", "Tên chương trình / Ngành đào tạo", "Tổ hợp môn", "Phương thức", "2022", "2023", "2024"];
+  if (showDelta) head.push("Chênh lệch");
+  head.push("Đánh giá");
   return (
     <>
       <div className="flex flex-col gap-3 md:hidden">
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <article key={r.code} className="rounded-xl border border-line bg-surface p-4">
             <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold tracking-[0.04em] text-muted">{r.code}</p>
-                <h3 className="mt-0.5 text-[15px] font-semibold leading-snug text-ink">{r.name}</h3>
+              <div className="flex items-start gap-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-sm font-bold tabular-nums text-ink">
+                  {String(rankOffset + i + 1).padStart(2, "0")}
+                </span>
+                <div>
+                  <p className="text-[11px] font-semibold tracking-[0.04em] text-muted">{r.code}</p>
+                  <h3 className="mt-0.5 text-[15px] font-semibold leading-snug text-ink">{r.name}</h3>
+                </div>
               </div>
               <TierBadge tier={r.tier} className="shrink-0" />
             </div>
@@ -161,6 +196,14 @@ export function CutoffTable({ rows }: { rows: CutoffRow[] }) {
                 </div>
               ))}
             </dl>
+            {typeof r.delta === "number" ? (
+              <p className="mt-2 text-[13px] tabular-nums text-body">
+                Chênh lệch:{" "}
+                <strong className="text-ink">
+                  {r.delta >= 0 ? `+${r.delta.toFixed(2)}` : r.delta.toFixed(2)}
+                </strong>
+              </p>
+            ) : null}
           </article>
         ))}
       </div>
@@ -168,27 +211,36 @@ export function CutoffTable({ rows }: { rows: CutoffRow[] }) {
       <table className="w-full min-w-[880px] border-collapse bg-surface text-sm">
         <thead>
           <tr className="bg-surface-2 text-left text-xs font-semibold tracking-[0.02em] text-ink">
-            {["Mã ngành", "Tên chương trình / Ngành đào tạo", "Tổ hợp môn", "Phương thức", "2022", "2023", "2024", "Đánh giá"].map(
-              (h) => (
-                <th key={h} scope="col" className="px-3 py-3 font-semibold">
-                  {h}
-                </th>
-              ),
-            )}
+            {head.map((h) => (
+              <th key={h} scope="col" className="px-3 py-3 font-semibold">
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
+          {rows.map((r, i) => (
             <tr key={r.code} className="border-t border-line-soft align-middle hover:bg-surface-2/60">
-              <td className="px-3 py-3 font-semibold text-ink">{r.code}</td>
+              <td className="px-3 py-3 font-semibold tabular-nums text-ink">
+                {String(rankOffset + i + 1).padStart(2, "0")} · {r.code}
+              </td>
               <td className="px-3 py-3 font-medium text-ink">{r.name}</td>
               <td className="px-3 py-3 text-muted">{r.combos}</td>
               <td className="px-3 py-3 text-muted">{r.method}</td>
-              {[r.y2022, r.y2023, r.y2024].map((y, i) => (
-                <td key={i} className="px-3 py-3 font-semibold tabular-nums text-ink">
+              {[r.y2022, r.y2023, r.y2024].map((y, j) => (
+                <td key={j} className="px-3 py-3 font-semibold tabular-nums text-ink">
                   {y.toFixed(2)}
                 </td>
               ))}
+              {showDelta ? (
+                <td className="px-3 py-3 font-semibold tabular-nums text-ink">
+                  {typeof r.delta === "number"
+                    ? r.delta >= 0
+                      ? `+${r.delta.toFixed(2)}`
+                      : r.delta.toFixed(2)
+                    : "—"}
+                </td>
+              ) : null}
               <td className="px-3 py-3">
                 <TierBadge tier={r.tier} />
               </td>
