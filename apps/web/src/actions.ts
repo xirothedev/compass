@@ -43,3 +43,16 @@ export async function calcRank(
   const rank = interpRank(score);
   return { score, combo, rank, percentile: (rank / TOTAL) * 100 };
 }
+
+export type SaveOrderResult = { ok: boolean; count: number } | null;
+
+// ponytail: mock persist; real impl writes Nguyện vọng order to Supabase (guidance domain)
+export async function saveOrder(_prev: SaveOrderResult, formData: FormData): Promise<SaveOrderResult> {
+  try {
+    const order = JSON.parse(String(formData.get("order") ?? "[]")) as unknown;
+    if (!Array.isArray(order) || !order.every((c) => typeof c === "string")) return { ok: false, count: 0 };
+    return { ok: true, count: order.length };
+  } catch {
+    return { ok: false, count: 0 };
+  }
+}

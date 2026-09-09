@@ -1,9 +1,9 @@
 "use client";
 
-import { useActionState, useDeferredValue, useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { useTheme } from "next-themes";
 import { CutoffTable, FilterChip, SchoolCard, TierBadge, type CutoffRow, type SchoolCardData } from "@compass/ui";
-import { calcRank } from "./actions";
+import { calcRank, saveOrder } from "./actions";
 
 /* ---------- Theme toggle (header) ---------- */
 export function ThemeToggle() {
@@ -147,6 +147,8 @@ export function SuggestionList({
             </option>
           ))}
         </select>
+        <VirtualFilterTip />
+        <ReorderModal items={sorted} />
       </div>
       <CutoffTable rows={sorted} />
       <p className="mt-3 text-[13px] tabular-nums text-muted">
@@ -309,5 +311,186 @@ export function OnboardingWizard() {
         <span className="sr-only">{Math.round(progress)}% hoàn thành</span>
       </div>
     </div>
+  );
+}
+
+/* ---------- Lọc ảo tooltip (CSS-only, hover + keyboard focus) ---------- */
+export function VirtualFilterTip() {
+  return (
+    <span className="group/tip relative inline-flex items-center">
+      <button
+        type="button"
+        aria-describedby="loc-ao-tip"
+        aria-label="Lọc ảo là gì?"
+        className="flex size-11 items-center justify-center rounded-full border border-line text-sm font-bold text-muted hover:bg-surface-2"
+      >
+        ?
+      </button>
+      <span
+        role="tooltip"
+        id="loc-ao-tip"
+        className="absolute bottom-full left-1/2 z-30 mb-2 hidden w-64 -translate-x-1/2 rounded-lg border border-line bg-surface p-3 text-[13px] leading-relaxed text-body shadow-lg group-hover/tip:block group-focus-within/tip:block"
+      >
+        <strong className="text-ink">Lọc ảo</strong> ẩn các nguyện vọng có điểm chuẩn 2024 cao hơn
+        điểm của bạn quá 1,5 điểm, giúp danh sách gọn và thực tế hơn.
+      </span>
+    </span>
+  );
+}
+
+/* ---------- Reorder modal: drag + keyboard, optimistic preview, server save ---------- */
+function moveInList<T>(list: T[], from: number, to: number): T[] {
+  const next = [...list];
+  const [picked] = next.splice(from, 1);
+  next.splice(to, 0, picked);
+  return next;
+}
+
+function GripIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden className="shrink-0 text-faint">
+      {[3, 8, 13].map((y) =>
+        [3, 8, 13].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" />),
+      )}
+    </svg>
+  );
+}
+
+export function ReorderModal({ items }: { items: CutoffRow[] }) {
+  const [open, setOpen] = useState(false);
+  const codes = useMemo(() => items.map((i) => i.code), [items]);
+  const byCode = useMemo(() => new Map(items.map((i) => [i.code, i])), [items]);
+  const [order, setOrder] = useState(codes);
+  const [view, moveView] = useOptimistic(order, (cur: string[], m: { from: number; to: number }) =>
+    moveInList(cur, m.from, m.to),
+  );
+  const [saved, saveAction, isSaving] = useActionState(saveOrder, null);
+  const dragFrom = useRef<number | null>(null);
+  const viewRef = useRef(view);
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    viewRef.current = view;
+  });
+  useEffect(() => {
+    if (open) panelRef.current?.focus();
+  }, [open ]);
+
+  const shown = open ? view : order;
+  const commit = (from: number, to: number) =>
+    startTransition(() => {
+      moveView({ from, to });
+      setOrder(moveInList(viewRef.current, from, to));
+    });
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setOrder(codes);
+          setOpen(true);
+        }}
+        className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-5 text-sm font-semibold text-ink hover:bg-surface-2"
+      >
+        Sắp xếp thứ tự
+      </button>
+      {open ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-6"
+          onClick={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+          }}
+        >
+          <div
+            ref={panelRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Sắp xếp thứ tự nguyện vọng"
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-surface p-5 outline-none sm:rounded-2xl"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-ink">Sắp xếp thứ tự nguyện vọng</h2>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Đóng"
+                className="flex size-11 items-center justify-center rounded-lg text-muted hover:bg-surface-2"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="mt-1 text-[13px] text-muted">Kéo thả hoặc dùng nút ↑ ↓. Nguyện vọng 1 là ưu tiên cao nhất.</p>
+            <ol className="mt-4 flex flex-col gap-2 overflow-y-auto pr-1">
+              {shown.map((code, i) => {
+                const item = byCode.get(code);
+                if (!item) return null;
+                return (
+                  <li
+                    key={code}
+                    draggable
+                    onDragStart={() => {
+                      dragFrom.current = i;
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      if (dragFrom.current !== null && dragFrom.current !== i) {
+                        const from = dragFrom.current;
+                        dragFrom.current = i;
+                        startTransition(() => moveView({ from, to: i }));
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragFrom.current !== null) {
+                        setOrder(viewRef.current);
+                        dragFrom.current = null;
+                      }
+                    }}
+                    onDragEnd={() => {
+                      if (dragFrom.current !== null) {
+                        setOrder(viewRef.current);
+                        dragFrom.current = null;
+                      }
+                    }}
+                    className="flex items-center gap-2 rounded-xl border border-line bg-surface p-2.5"
+                  >
+                    <GripIcon />
+                    <span className="w-7 shrink-0 text-center text-sm font-bold tabular-nums text-ink">{i + 1}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">{item.name}</span>
+                      <span className="text-xs tabular-nums text-muted">
+                        {item.code} • {item.y2024.toFixed(2)}
+                      </span>
+                    </span>
+                    <TierBadge tier={item.tier} />
+                    <span className="flex shrink-0 flex-col">
+                      <button type="button" aria-label={`Đưa ${item.code} lên trên`} disabled={i === 0} onClick={() => commit(i, i - 1)} className="flex size-11 items-center justify-center rounded text-muted hover:bg-surface-2 disabled:opacity-30">
+                        ↑
+                      </button>
+                      <button type="button" aria-label={`Đưa ${item.code} xuống dưới`} disabled={i === shown.length - 1} onClick={() => commit(i, i + 1)} className="flex size-11 items-center justify-center rounded text-muted hover:bg-surface-2 disabled:opacity-30">
+                        ↓
+                      </button>
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
+            <form action={saveAction} className="mt-4 flex items-center gap-3 border-t border-line-soft pt-4">
+              <input type="hidden" name="order" value={JSON.stringify(order)} />
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="h-11 flex-1 rounded-lg bg-cta text-sm font-semibold text-on-cta hover:bg-cta-hover disabled:opacity-60"
+              >
+                {isSaving ? "Đang lưu..." : saved?.ok ? `Đã lưu ${saved.count} nguyện vọng ✓` : "Lưu thứ tự"}
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }
