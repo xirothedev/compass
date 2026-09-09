@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import Link from "next/link";
 import { useTheme } from "next-themes";
 import { CutoffTable, FilterChip, SchoolCard, TierBadge, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
@@ -198,22 +199,44 @@ export function LookupForm({ defaultScore = 26.85 }: { defaultScore?: number }) 
           {isPending ? "Đang tra cứu..." : "Tra cứu thứ hạng"}
         </button>
       </form>
-      <div className="h-fit rounded-2xl border border-line bg-surface p-6" aria-live="polite">
+      <div className="h-fit overflow-hidden rounded-2xl bg-[#0d2c54] p-6 text-white" aria-live="polite">
         {state ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-sm text-muted">
-              Tổ hợp {state.combo} - Điểm {state.score.toFixed(2)}
-            </p>
-            <p className="text-4xl font-bold tracking-tight tabular-nums text-ink">
-              #{state.rank.toLocaleString("vi-VN")}
-            </p>
-            <p className="text-sm text-body">
-              Top {state.percentile.toFixed(1)}% toàn quốc (ước tính từ phổ điểm mock).
-            </p>
-            <TierBadge tier={state.percentile <= 5 ? "reach" : state.percentile <= 20 ? "match" : "safe"} className="mt-1 self-start" />
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-5">
+              <Dial value={100 - state.percentile} />
+              <div>
+                <p className="text-sm text-white/70">
+                  Điểm {state.score.toFixed(2)} · Tổ hợp {state.combo}
+                </p>
+                <p className="mt-1 text-3xl font-bold tracking-tight tabular-nums">
+                  #{state.rank.toLocaleString("vi-VN")}
+                </p>
+                <p className="mt-1 text-sm text-white/85">
+                  Top {state.percentile.toFixed(1)}% toàn quốc (ước tính từ phổ điểm mock).
+                </p>
+              </div>
+            </div>
+            <TierBadge
+              tier={state.percentile <= 5 ? "safe" : state.percentile <= 20 ? "match" : "reach"}
+              className="self-start border-white/20"
+            />
+            <div className="flex flex-col gap-2 border-t border-white/15 pt-4 sm:flex-row">
+              <Link
+                href="/suggestions"
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
+              >
+                Xem gợi ý nguyện vọng
+              </Link>
+              <Link
+                href="/schools"
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-white/60 px-5 text-sm font-semibold text-white hover:bg-white/10"
+              >
+                So sánh điểm chuẩn
+              </Link>
+            </div>
           </div>
         ) : (
-          <p className="text-sm text-muted">Nhập điểm và tổ hợp để xem thứ hạng ước tính của bạn.</p>
+          <p className="text-sm text-white/75">Nhập điểm và tổ hợp để xem thứ hạng ước tính của bạn.</p>
         )}
       </div>
     </div>
@@ -311,6 +334,31 @@ export function OnboardingWizard() {
         <span className="sr-only">{Math.round(progress)}% hoàn thành</span>
       </div>
     </div>
+  );
+}
+
+/* ---------- Probability dial (SVG ring, tabular-nums label) ---------- */
+export function Dial({ value, label }: { value: number; label?: string }) {
+  const r = 26;
+  const c = 2 * Math.PI * r;
+  const pct = Math.min(100, Math.max(0, value));
+  return (
+    <span className="relative inline-flex size-[72px] shrink-0 items-center justify-center" role="img" aria-label={label ?? `${pct.toFixed(1)}%`}>
+      <svg width="72" height="72" viewBox="0 0 72 72" aria-hidden className="-rotate-90">
+        <circle cx="36" cy="36" r={r} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="7" />
+        <circle
+          cx="36"
+          cy="36"
+          r={r}
+          fill="none"
+          stroke="#2dd4bf"
+          strokeWidth="7"
+          strokeLinecap="round"
+          strokeDasharray={`${(pct / 100) * c} ${c}`}
+        />
+      </svg>
+      <span className="absolute text-[13px] font-bold tabular-nums text-white">{pct.toFixed(0)}%</span>
+    </span>
   );
 }
 
