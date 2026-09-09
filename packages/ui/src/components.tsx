@@ -47,42 +47,72 @@ export type SchoolCardData = {
   cutoff2024: number;
   trend: "up" | "flat" | "down";
   tuition: string;
+  kind?: string;
+  region?: string;
+  majors?: number;
 };
 
-const TREND = { up: "↗", flat: "→", down: "↘" } as const;
+const TREND = { up: "↗ tăng", flat: "→ ổn định", down: "↘ giảm" } as const;
 
+// ponytail: card mirrors Stitch catalog (emblem + badges + metric box + footer links);
+// compare button omitted (no compare feature yet) rather than shipped dead.
 export function SchoolCard({ school }: { school: SchoolCardData }) {
+  const detail = `/schools/${school.code.toLowerCase()}`;
   return (
-    <a
-      href={`/schools/${school.code.toLowerCase()}`}
-      className="group flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 transition-shadow hover:shadow-[0_4px_12px_rgba(13,44,84,0.08)]"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="flex size-11 items-center justify-center rounded-lg bg-cta text-sm font-bold text-on-cta">
-            {school.code.slice(0, 2)}
-          </span>
-          <div>
-            <p className="text-[11px] font-semibold tracking-[0.04em] text-muted">{school.code}</p>
-            <h3 className="text-base font-semibold leading-snug text-ink">{school.name}</h3>
+    <article className="flex flex-col gap-3 rounded-2xl border border-line bg-surface p-5 transition-shadow hover:shadow-[0_4px_12px_rgba(13,44,84,0.08)]">
+      <div className="flex items-start gap-3">
+        <span className="flex size-14 shrink-0 flex-col items-center justify-center rounded-xl bg-cta text-on-cta">
+          <span className="text-sm font-bold">{school.code.slice(0, 3)}</span>
+          <span className="text-[10px] opacity-80">{school.region ?? ""}</span>
+        </span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap gap-1.5">
+            {[school.kind, school.region].filter(Boolean).map((b) => (
+              <span key={b} className="rounded bg-chip px-1.5 py-0.5 text-[11px] font-semibold text-accent">
+                {b}
+              </span>
+            ))}
           </div>
+          <p className="mt-1 text-[11px] font-semibold tracking-[0.04em] text-muted">Mã: {school.code}</p>
+          <h3 className="text-base font-semibold leading-snug text-ink">{school.name}</h3>
         </div>
-        <span className="shrink-0 rounded-md bg-chip px-2 py-1 text-sm font-bold tabular-nums text-ink">
-          {school.cutoff2024.toFixed(2)}
-        </span>
       </div>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {school.combos.map((c) => (
-          <span key={c} className="rounded bg-chip px-1.5 py-0.5 text-[11px] font-semibold tracking-[0.02em] text-accent">
-            {c}
-          </span>
-        ))}
-        <span className="ml-auto text-[13px] tabular-nums text-muted">
-          Xu hướng 3 năm {TREND[school.trend]}
-        </span>
+      <dl className="grid grid-cols-3 gap-2 rounded-xl bg-surface-2 p-3 text-center">
+        <div>
+          <dt className="text-[11px] text-muted">Điểm chuẩn 2024</dt>
+          <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">{school.cutoff2024.toFixed(2)}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] text-muted">Xu hướng 3 năm</dt>
+          <dd className="mt-0.5 text-sm font-semibold tabular-nums text-ink">{TREND[school.trend]}</dd>
+        </div>
+        <div>
+          <dt className="text-[11px] text-muted">Học phí / năm</dt>
+          <dd className="mt-0.5 text-sm font-semibold text-ink">{school.tuition}</dd>
+        </div>
+      </dl>
+      <div className="flex flex-col gap-1 text-[13px] text-muted">
+        <p>
+          Tổ hợp chủ lực: <span className="font-semibold text-ink">{school.combos.join(", ")}</span>
+        </p>
+        {typeof school.majors === "number" ? (
+          <p>
+            Ngành tuyển sinh: <span className="font-semibold tabular-nums text-ink">{school.majors} mã ngành</span>
+          </p>
+        ) : null}
       </div>
-      <p className="border-t border-line-soft pt-3 text-[13px] text-muted">Học phí: {school.tuition}</p>
-    </a>
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-line-soft pt-3">
+        <a href="/suggestions" className="text-sm font-semibold text-accent hover:underline">
+          Gợi ý nguyện vọng tại trường
+        </a>
+        <a
+          href={detail}
+          className="inline-flex h-11 items-center rounded-lg bg-cta px-4 text-sm font-semibold text-on-cta hover:bg-cta-hover"
+        >
+          Chi tiết &amp; Điểm chuẩn →
+        </a>
+      </div>
+    </article>
   );
 }
 

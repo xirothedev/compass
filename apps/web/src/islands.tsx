@@ -40,61 +40,178 @@ export function ThemeToggle() {
 }
 
 /* ---------- Schools: search + filter chips (deferred query, transitioned toggles) ---------- */
+/* ---------- Schools: search + quick pills + 4 selects + sort (Stitch catalog) ---------- */
+const SCORE_RANGES = [
+  { value: "", label: "Mọi mức điểm" },
+  { value: "27+", label: "Trên 27.00 điểm" },
+  { value: "24-27", label: "24.00 - 27.00" },
+  { value: "20-24", label: "20.00 - 24.00" },
+  { value: "19-", label: "Dưới 20.00 điểm" },
+] as const;
+
+const SCHOOL_SORTS = [
+  { value: "cutoff-desc", label: "Điểm chuẩn TB (Cao → Thấp)" },
+  { value: "cutoff-asc", label: "Điểm chuẩn TB (Thấp → Cao)" },
+  { value: "az", label: "Theo A-Z" },
+] as const;
+
 export function SchoolFilters({
   schools,
   regions,
   groups,
+  kinds,
   initialQuery = "",
 }: {
-  schools: (SchoolCardData & { region: string; groups: string[] })[];
+  schools: (SchoolCardData & { region: string; groups: string[]; kind: string })[];
   regions: string[];
   groups: string[];
+  kinds: string[];
   initialQuery?: string;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [region, setRegion] = useState<string | null>(null);
   const [group, setGroup] = useState<string | null>(null);
+  const [kind, setKind] = useState("");
+  const [score, setScore] = useState("");
+  const [sort, setSort] = useState<(typeof SCHOOL_SORTS)[number]["value"]>("cutoff-desc");
   const [isPending, startTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
 
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
-    return schools.filter(
+    const arr = schools.filter(
       (s) =>
         (!q || s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)) &&
         (!region || s.region === region) &&
-        (!group || s.groups.includes(group)),
+        (!group || s.groups.includes(group)) &&
+        (!kind || s.kind === kind) &&
+        (!score ||
+          (score === "27+" ? s.cutoff2024 >= 27 : score === "24-27" ? s.cutoff2024 >= 24 && s.cutoff2024 < 27 : score === "20-24" ? s.cutoff2024 >= 20 && s.cutoff2024 < 24 : s.cutoff2024 < 20)),
     );
-  }, [schools, deferredQuery, region, group]);
+    if (sort === "cutoff-asc") arr.sort((a, b) => a.cutoff2024 - b.cutoff2024);
+    else if (sort === "az") arr.sort((a, b) => a.name.localeCompare(b.name, "vi"));
+    else arr.sort((a, b) => b.cutoff2024 - a.cutoff2024);
+    return arr;
+  }, [schools, deferredQuery, region, group, kind, score, sort]);
 
   const toggle = (fn: (v: string | null) => void, cur: string | null, v: string) =>
     startTransition(() => fn(cur === v ? null : v));
+  const reset = () =>
+    startTransition(() => {
+      setQuery("");
+      setRegion(null);
+      setGroup(null);
+      setKind("");
+      setScore("");
+    });
+  const hasFilter = query !== "" || region !== null || group !== null || kind !== "" || score !== "";
 
   return (
     <div>
-      <label className="block">
-        <span className="sr-only">Tìm kiếm trường</span>
+      <form
+        role="search"
+        onSubmit={(e) => e.preventDefault()}
+        className="flex items-center gap-2 rounded-xl border border-line bg-surface p-2 pl-4"
+      >
+        <label htmlFor="school-search" className="sr-only">
+          Tìm kiếm trường
+        </label>
         <input
+          id="school-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Tìm kiếm theo tên trường, mã trường (BKA, NEU, FTU...)"
-          className="h-12 w-full rounded-lg border border-line bg-surface px-4 text-sm text-ink placeholder:text-faint focus:border-accent focus:ring-2 focus:ring-accent/30 focus:outline-none"
+          className="h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none"
         />
-      </label>
-      <div className="mt-3 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Khu vực">
-        {regions.map((r) => (
-          <FilterChip key={r} label={r} active={region === r} onToggle={() => toggle(setRegion, region, r)} />
-        ))}
+        <kbd className="hidden shrink-0 rounded border border-line bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted sm:block">
+          ⌘K
+        </kbd>
+        <button
+          type="submit"
+          aria-label="Tìm kiếm"
+          className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-cta text-sm font-bold text-on-cta hover:bg-cta-hover"
+        >
+          →
+        </button>
+      </form>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2" aria-label="Bộ lọc nhanh">
+        <span className="text-xs font-semibold tracking-[0.04em] text-muted uppercase">Bộ lọc nhanh:</span>
+        {[...regions, ...groups].map((f) => {
+          const active = region === f || group === f;
+          const isRegion = regions.includes(f);
+          return (
+            <FilterChip
+              key={f}
+              label={active ? `${f} ×` : f}
+              active={active}
+              onToggle={() =>
+                toggle(isRegion ? setRegion : setGroup, isRegion ? region : group, f)
+              }
+            />
+          );
+        })}
+        {hasFilter ? (
+          <button type="button" onClick={reset} className="text-[13px] font-semibold text-accent hover:underline">
+            Đặt lại bộ lọc
+          </button>
+        ) : null}
       </div>
-      <div className="mt-2 flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Nhóm ngành">
-        {groups.map((g) => (
-          <FilterChip key={g} label={g} active={group === g} onToggle={() => toggle(setGroup, group, g)} />
-        ))}
+
+      <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink">Khu vực &amp; Tỉnh thành</span>
+          <select value={region ?? ""} onChange={(e) => setRegion(e.target.value || null)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            <option value="">Tất cả khu vực</option>
+            {regions.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink">Nhóm ngành đào tạo</span>
+          <select value={group ?? ""} onChange={(e) => setGroup(e.target.value || null)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            <option value="">Tất cả nhóm ngành</option>
+            {groups.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink">Loại hình trường</span>
+          <select value={kind} onChange={(e) => setKind(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            <option value="">Tất cả loại hình</option>
+            {kinds.map((k) => (
+              <option key={k} value={k}>{k}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink">Khoảng điểm chuẩn 2024</span>
+          <select value={score} onChange={(e) => setScore(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            {SCORE_RANGES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </select>
+        </label>
       </div>
-      <p className="mt-4 text-sm text-muted" aria-live="polite">
-        {filtered.length} trường{isPending ? " (đang lọc...)" : ""}
-      </p>
-      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted" aria-live="polite">
+          Tìm thấy <strong className="tabular-nums text-ink">{filtered.length}</strong> Trường phù hợp
+          {isPending ? " (đang lọc...)" : ""}
+        </p>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          Sắp xếp:
+          <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="h-11 rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            {SCHOOL_SORTS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-2">
         {filtered.map((s) => (
           <SchoolCard key={s.code} school={s} />
         ))}
