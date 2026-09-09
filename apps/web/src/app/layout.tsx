@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   title: "Compass - Định hướng nguyện vọng THPTQG",
   description:
     "Tra cứu thứ hạng, điểm chuẩn và gợi ý nguyện vọng thông minh cho thí sinh kỳ thi THPTQG.",
+  icons: { icon: "/logo/compass-mark.webp", apple: "/logo/compass-mark.webp" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

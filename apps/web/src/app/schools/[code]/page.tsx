@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CutoffTable, Section, TierBadge } from "@compass/ui";
 import { classifyBucket } from "@compass/ui";
 import { CURRENT_USER, REVIEWS, TRUONGS, getNganhsByTruong, getTruong } from "../../../mocks";
+import { FollowButton } from "../../../islands";
 
 export function generateStaticParams() {
   return TRUONGS.map((t) => ({ code: t.ma.toLowerCase() }));
@@ -34,9 +35,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
         <a href="/suggestions" className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-6 text-sm font-semibold text-on-cta hover:bg-accent-hover">
           Tạo gợi ý nguyện vọng
         </a>
-        <button type="button" disabled title="Theo dõi trường - sẽ có ở bước sau" className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-lg border border-line bg-surface px-6 text-sm font-semibold text-ink opacity-60">
-          + Thêm vào danh sách theo dõi
-        </button>
+        <FollowButton code={school.ma} />
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
         {school.toHopChuLuc.map((c) => (

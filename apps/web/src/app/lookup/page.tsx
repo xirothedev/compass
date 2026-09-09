@@ -4,7 +4,15 @@ import { LookupForm } from "../../islands";
 
 export const metadata = { title: "Tra cứu Thứ hạng & Phổ điểm - Compass" };
 
-export default function LookupPage() {
+export default async function LookupPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ score?: string; combo?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
+  const parsed = Number(params.score);
+  const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.diem;
+  const combo = (params.combo ?? CURRENT_USER.toHop).toUpperCase();
   return (
     <div className="mx-auto w-full max-w-[1280px] px-6 py-10">
       <p className="text-xs font-semibold tracking-[0.04em] text-accent uppercase">Tra cứu</p>
@@ -15,7 +23,7 @@ export default function LookupPage() {
         Nhập điểm và tổ hợp xét tuyển để biết thứ hạng ước tính của bạn so với phổ điểm toàn quốc.
       </p>
       <div className="mt-8">
-        <LookupForm defaultScore={CURRENT_USER.diem} />
+        <LookupForm defaultScore={score} defaultCombo={combo} />
       </div>
       <Section title="Cách đọc kết quả" sub="Thứ hạng càng nhỏ càng tốt. Top 5% nghĩa là điểm của bạn cao hơn 95% thí sinh cùng tổ hợp.">
         <ul className="max-w-2xl list-disc space-y-2 pl-5 text-sm leading-relaxed text-body">

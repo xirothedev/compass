@@ -5,9 +5,17 @@ import { SuggestionList } from "../../islands";
 
 export const metadata = { title: "Gợi ý Nguyện vọng Thông minh - Compass" };
 
-export default function SuggestionsPage() {
-  const scored = NGANHS.filter((n) => n.toHop.includes(CURRENT_USER.toHop)).map((n) => {
-    const delta = CURRENT_USER.diem - n.diemChuan.y2024;
+export default async function SuggestionsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ score?: string; combo?: string }>;
+}) {
+  const params = (await searchParams) ?? {};
+  const parsed = Number(params.score);
+  const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.diem;
+  const combo = (params.combo ?? CURRENT_USER.toHop).toUpperCase();
+  const scored = NGANHS.filter((n) => n.toHop.includes(combo)).map((n) => {
+    const delta = score - n.diemChuan.y2024;
     const school = TRUONGS.find((t) => t.ma === n.truong);
     return {
       code: n.maNganh,
@@ -35,16 +43,13 @@ export default function SuggestionsPage() {
         Danh mục Gợi ý Nguyện vọng Thông minh
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
-        Thuật toán Compass đã đối sánh điểm số {CURRENT_USER.diem.toFixed(2)} (tổ hợp {CURRENT_USER.toHop}) của
+        Thuật toán Compass đã đối sánh điểm số {score.toFixed(2)} (tổ hợp {combo}) của
         bạn với điểm chuẩn 2024. Mã số xét tuyển: {CURRENT_USER.maSo}.
       </p>
       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
         <a href="/onboarding" className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-surface px-5 text-sm font-semibold text-ink hover:bg-surface-2">
           Đổi tổ hợp / Điểm
         </a>
-        <button type="button" disabled title="Xuất file - sẽ có ở bước sau" className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-lg border border-line bg-surface px-5 text-sm font-semibold text-ink opacity-60">
-          Xuất PDF / Excel
-        </button>
       </div>
 
       <Section title="Cấu trúc Danh mục Nguyện vọng (Portfolio Health)">
@@ -54,7 +59,13 @@ export default function SuggestionsPage() {
       </Section>
 
       <Section title="Tất cả nguyện vọng phù hợp">
-        <SuggestionList rows={scored} deltas={deltas} score={CURRENT_USER.diem} />
+        {scored.length > 0 ? (
+          <SuggestionList rows={scored} deltas={deltas} score={score} />
+        ) : (
+          <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
+            Chưa có ngành nào xét tổ hợp {combo} trong dữ liệu mẫu. Thử tổ hợp A00, D01 hoặc quay lại khảo sát.
+          </p>
+        )}
       </Section>
 
       <Section title="Quy tắc vàng xếp thứ tự nguyện vọng">

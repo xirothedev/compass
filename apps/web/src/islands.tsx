@@ -3,8 +3,9 @@
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { CutoffTable, FilterChip, SchoolCard, TierBadge, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { BUCKET_META, CutoffTable, FilterChip, SchoolCard, TierBadge, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
+import { useProfile } from "./profile";
 
 /* ---------- Theme toggle (header) ---------- */
 export function ThemeToggle() {
@@ -150,6 +151,7 @@ export function SuggestionList({
         </select>
         <VirtualFilterTip />
         <ReorderModal items={sorted} />
+        <ExportCsv rows={sorted} />
       </div>
       <CutoffTable rows={sorted} />
       <p className="mt-3 text-[13px] tabular-nums text-muted">
@@ -162,7 +164,7 @@ export function SuggestionList({
 /* ---------- Lookup: score + combo -> rank via server action ---------- */
 const COMBOS = ["A00", "A01", "B00", "D01", "C00", "K01"];
 
-export function LookupForm({ defaultScore = 26.85 }: { defaultScore?: number }) {
+export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { defaultScore?: number; defaultCombo?: string }) {
   const [state, action, isPending] = useActionState(calcRank, null);
   return (
     <div className="grid gap-6 lg:grid-cols-[400px_1fr]">
@@ -184,7 +186,7 @@ export function LookupForm({ defaultScore = 26.85 }: { defaultScore?: number }) 
         <label htmlFor="combo" className="mt-4 block text-sm font-semibold text-ink">
           Tổ hợp xét tuyển
         </label>
-        <select id="combo" name="combo" defaultValue="A00" className="mt-2 h-12 w-full rounded-lg border border-line bg-surface px-3 text-sm focus:border-accent focus:outline-none">
+        <select id="combo" name="combo" defaultValue={COMBOS.includes(defaultCombo) ? defaultCombo : "A00"} className="mt-2 h-12 w-full rounded-lg border border-line bg-surface px-3 text-sm focus:border-accent focus:outline-none">
           {COMBOS.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -222,7 +224,7 @@ export function LookupForm({ defaultScore = 26.85 }: { defaultScore?: number }) 
             />
             <div className="flex flex-col gap-2 border-t border-white/15 pt-4 sm:flex-row">
               <Link
-                href="/suggestions"
+                href={`/suggestions?score=${state.score.toFixed(2)}&combo=${encodeURIComponent(state.combo)}`}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-lg bg-[#00838f] px-5 text-sm font-semibold text-white hover:bg-[#006972]"
               >
                 Xem gợi ý nguyện vọng
@@ -256,11 +258,8 @@ const STRATEGIES = [
 
 export function OnboardingWizard() {
   const [step, setStep] = useState(0);
-  const [score, setScore] = useState("26.85");
-  const [combo, setCombo] = useState("A00");
-  const [group, setGroup] = useState(GROUP_OPTIONS[0]);
-  const [region, setRegion] = useState(REGION_OPTIONS[0]);
-  const [strategy, setStrategy] = useState<string>("balanced");
+  const { profile, setProfile } = useProfile();
+  const { score, combo, group, region, strategy } = profile;
   const [saved, setSaved] = useState(false);
   const progress = useMemo(() => ((step + 1) / STEPS.length) * 100, [step]);
   return (
@@ -284,9 +283,9 @@ export function OnboardingWizard() {
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(step === 0 ? COMBO_OPTIONS : step === 1 ? GROUP_OPTIONS : REGION_OPTIONS).map((o) => {
-                const active = step === 0 ? combo === o : step === 1 ? group === o : region === o;
-                const pick = step === 0 ? setCombo : step === 1 ? setGroup : setRegion;
-                return <FilterChip key={o} label={o} active={active} onToggle={() => pick(o)} />;
+                const key = step === 0 ? "combo" : step === 1 ? "group" : "region";
+                const active = profile[key] === o;
+                return <FilterChip key={o} label={o} active={active} onToggle={() => setProfile({ [key]: o })} />;
               })}
             </div>
             {step === 0 ? (
@@ -294,7 +293,7 @@ export function OnboardingWizard() {
                 <span className="text-sm font-semibold text-ink">Điểm dự kiến (thang 30)</span>
                 <input
                   value={score}
-                  onChange={(e) => setScore(e.target.value)}
+                  onChange={(e) => setProfile({ score: e.target.value })}
                   type="number"
                   min={0}
                   max={30}
@@ -311,7 +310,7 @@ export function OnboardingWizard() {
               {STRATEGIES.map((s) => (
                 <label key={s.value} className={`cursor-pointer rounded-xl border p-4 ${strategy === s.value ? "border-accent bg-surface-2" : "border-line"}`}>
                   <span className="flex items-center gap-3">
-                    <input type="radio" name="strategy" value={s.value} checked={strategy === s.value} onChange={() => setStrategy(s.value)} className="size-4 accent-accent" />
+                    <input type="radio" name="strategy" value={s.value} checked={strategy === s.value} onChange={() => setProfile({ strategy: s.value })} className="size-4 accent-accent" />
                     <span className="font-semibold text-ink">{s.title}</span>
                   </span>
                   <span className="mt-1 block pl-7 text-sm text-body">{s.desc}</span>
@@ -372,9 +371,12 @@ export function OnboardingWizard() {
               Tiếp tục →
             </button>
           ) : (
-            <a href="/suggestions" className="ml-auto inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-cta hover:bg-accent-hover">
+            <Link
+              href={`/suggestions?score=${encodeURIComponent(score)}&combo=${encodeURIComponent(combo)}`}
+              className="ml-auto inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-cta hover:bg-accent-hover"
+            >
               Xem gợi ý nguyện vọng
-            </a>
+            </Link>
           )}
         </div>
         <span className="sr-only">{Math.round(progress)}% hoàn thành</span>
@@ -405,6 +407,97 @@ export function Dial({ value, label }: { value: number; label?: string }) {
       </svg>
       <span className="absolute text-[13px] font-bold tabular-nums text-white">{pct.toFixed(0)}%</span>
     </span>
+  );
+}
+
+/* ---------- CSV export (Excel opens CSV; BOM keeps Vietnamese intact) ---------- */
+export function ExportCsv({ rows }: { rows: CutoffRow[] }) {
+  const download = () => {
+    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
+    const head = ["Thứ tự", "Mã ngành", "Tên chương trình", "Tổ hợp", "Phương thức", "2022", "2023", "2024", "Đánh giá"];
+    const lines = rows.map((r, i) =>
+      [i + 1, r.code, r.name, r.combos, r.method, r.y2022.toFixed(2), r.y2023.toFixed(2), r.y2024.toFixed(2), BUCKET_META[r.tier].label]
+        .map(esc)
+        .join(","),
+    );
+    const blob = new Blob(["﻿" + head.map(esc).join(",") + "\n" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "goi-y-nguyen-vong.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+  return (
+    <button
+      type="button"
+      onClick={download}
+      className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-5 text-sm font-semibold text-ink hover:bg-surface-2"
+    >
+      Xuất Excel (CSV)
+    </button>
+  );
+}
+
+/* ---------- Follow button + following list (profile-backed) ---------- */
+export function FollowButton({ code }: { code: string }) {
+  const { profile, setProfile } = useProfile();
+  const following = profile.followed.some((c) => c.toLowerCase() === code.toLowerCase());
+  const toggle = () =>
+    setProfile({
+      followed: following
+        ? profile.followed.filter((c) => c.toLowerCase() !== code.toLowerCase())
+        : [...profile.followed, code.toUpperCase()],
+    });
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={following}
+      className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-surface px-6 text-sm font-semibold text-ink hover:bg-surface-2"
+    >
+      {following ? "✓ Đang theo dõi" : "+ Thêm vào danh sách theo dõi"}
+    </button>
+  );
+}
+
+export function FollowingList({ schools }: { schools: (SchoolCardData & { region: string; groups: string[] })[] }) {
+  const { profile, setProfile } = useProfile();
+  const followed = schools.filter((s) =>
+    profile.followed.some((c) => c.toLowerCase() === s.code.toLowerCase()),
+  );
+  if (followed.length === 0) {
+    return (
+      <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
+        Bạn chưa theo dõi trường nào. Mở trang trường và bấm “Thêm vào danh sách theo dõi”.
+      </p>
+    );
+  }
+  return (
+    <div>
+      <p className="text-sm text-muted" aria-live="polite">
+        {followed.length} trường đang theo dõi
+      </p>
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {followed.map((s) => (
+          <div key={s.code} className="relative">
+            <SchoolCard school={s} />
+            <button
+              type="button"
+              onClick={() =>
+                setProfile({ followed: profile.followed.filter((c) => c.toLowerCase() !== s.code.toLowerCase()) })
+              }
+              aria-label={`Bỏ theo dõi ${s.code}`}
+              className="absolute top-3 right-3 flex size-11 items-center justify-center rounded-lg bg-surface text-muted shadow hover:bg-surface-2"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -503,6 +596,25 @@ export function ReorderModal({ items }: { items: CutoffRow[] }) {
             aria-modal="true"
             aria-label="Sắp xếp thứ tự nguyện vọng"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => {
+              // ponytail: tiny focus trap; upgrade to native <dialog> if modal grows
+              if (e.key !== "Tab" || !panelRef.current) return;
+              const els = Array.from(
+                panelRef.current.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), a[href], input, select, [tabindex]:not([tabindex="-1"])',
+                ),
+              ).filter((el) => el.offsetParent !== null);
+              if (els.length === 0) return;
+              const first = els[0];
+              const last = els[els.length - 1];
+              if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+              } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+              }
+            }}
             className="flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-2xl bg-surface p-5 outline-none sm:rounded-2xl"
           >
             <div className="flex items-center justify-between">
