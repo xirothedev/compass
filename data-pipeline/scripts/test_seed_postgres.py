@@ -62,7 +62,7 @@ def main():
             for table, cols, paths in [
                 (
                     "schools",
-                    "code,slug,name,province,region,kind,website,source_url",
+                    "code,slug,name,province,region,kind,website,source_url,groups,tuition_display,address,name_en",
                     [f"{SEED}/schools.csv"],
                 ),
                 (

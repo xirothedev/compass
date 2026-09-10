@@ -4,10 +4,99 @@ import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, 
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, YearSwitcher, AVAILABLE_YEARS, cutoffForYear, formatScore, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { getSupabase } from "@compass/db";
 import { useRouter, useSearchParams } from "next/navigation";
 import { calcRank, saveOrder } from "./actions";
 import { MAJORS } from "./mocks";
 import { useProfile } from "./profile";
+
+// ponytail: browser session only; server stays guest. Token is passed explicitly to actions.
+export function useSession() {
+  const [client] = useState(getSupabase);
+  const [session, setSession] = useState<{ email: string | null; token: string | null }>({ email: null, token: null });
+  const [ready, setReady] = useState(() => client === null);
+  useEffect(() => {
+    if (!client) return;
+    let live = true;
+    client.auth.getSession().then(({ data }) => {
+      if (!live) return;
+      setSession({ email: data.session?.user?.email ?? null, token: data.session?.access_token ?? null });
+      setReady(true);
+    });
+    const { data: sub } = client.auth.onAuthStateChange((_event, next) => {
+      if (!live) return;
+      setSession({ email: next?.user?.email ?? null, token: next?.access_token ?? null });
+      setReady(true);
+    });
+    return () => {
+      live = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [client]);
+  return { ...session, ready };
+}
+
+// ponytail: passwordless magic link; no password storage, no extra deps
+export function AuthButton() {
+  const { email, ready } = useSession();
+  const [address, setAddress] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  if (!ready) return null;
+  if (email) {
+    return (
+      <span className="flex items-center gap-2">
+        <span className="hidden max-w-32 truncate text-[13px] font-semibold text-ink sm:block" title={email}>
+          {email}
+        </span>
+        <button
+          type="button"
+          onClick={() => getSupabase()?.auth.signOut()}
+          className="inline-flex h-11 items-center rounded-lg border border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
+        >
+          Đăng xuất
+        </button>
+      </span>
+    );
+  }
+  return sent ? (
+    <p className="text-[13px] text-muted" role="status">Đã gửi link đăng nhập — kiểm tra email.</p>
+  ) : (
+    <form
+      className="flex items-center gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const sb = getSupabase();
+        if (!sb || !address.trim() || busy) return;
+        setBusy(true);
+        const { error } = await sb.auth.signInWithOtp({
+          email: address.trim(),
+          options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        });
+        setBusy(false);
+        if (!error) setSent(true);
+      }}
+    >
+      <label htmlFor="auth-email" className="sr-only">Email đăng nhập</label>
+      <input
+        id="auth-email"
+        type="email"
+        required
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="Email đăng nhập"
+        className="h-11 w-36 rounded-lg border border-line bg-surface px-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+      />
+      <button
+        type="submit"
+        disabled={busy}
+        className="inline-flex h-11 shrink-0 items-center rounded-lg bg-cta px-4 text-sm font-semibold text-on-cta hover:bg-cta-hover disabled:opacity-60"
+      >
+        {busy ? "…" : "Đăng nhập"}
+      </button>
+    </form>
+  );
+}
 
 // ponytail: client select mirrors ?year= in URL so share/back keep the year
 export function YearSelect({ year }: { year: number }) {
@@ -141,7 +230,7 @@ export function SchoolFilters({
           id="school-search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Tìm kiếm theo tên trường, mã trường (BKA, NEU, FTU...)"
+          placeholder="Tìm kiếm theo tên trường, mã trường (BKA, KHA, NTH...)"
           className="h-11 min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-faint focus:outline-none"
         />
         <kbd className="hidden shrink-0 rounded border border-line bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted sm:block">
@@ -260,11 +349,13 @@ export function SuggestionList({
   rows,
   deltas,
   score,
+  combo,
   year,
 }: {
   rows: CutoffRow[];
   deltas: Record<string, number>;
   score: number;
+  combo: string;
   year: number;
 }) {
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recommended");
@@ -314,7 +405,7 @@ export function SuggestionList({
             ))}
           </select>
           <VirtualFilterTip year={year} />
-          <ReorderModal items={sorted} year={year} />
+          <ReorderModal items={sorted} year={year} score={score} combo={combo} />
           <ExportCsv rows={sorted} />
         </div>
         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lọc theo giỏ">
@@ -994,6 +1085,92 @@ export function ExportCsv({ rows }: { rows: CutoffRow[] }) {
   );
 }
 
+/* ---------- Review submit (auth insert, published by default per migration 0001) ---------- */
+export function ReviewForm({ code }: { code: string }) {
+  const { email, ready } = useSession();
+  const router = useRouter();
+  const [csvc, setCsvc] = useState("5");
+  const [teacher, setTeacher] = useState("5");
+  const [comment, setComment] = useState("");
+  const [state, setState] = useState<"idle" | "saving" | "done" | "error">("idle");
+  if (!ready) return null;
+  if (!email) {
+    return <p className="text-sm text-muted">Đăng nhập (nút trên cùng) để gửi chia sẻ.</p>;
+  }
+  if (state === "done") {
+    return <p className="text-sm font-semibold text-ink" role="status">Đã gửi chia sẻ ✓ Cảm ơn bạn.</p>;
+  }
+  return (
+    <form
+      className="flex max-w-xl flex-col gap-3 rounded-2xl border border-line bg-surface p-5"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const sb = getSupabase();
+        if (!sb || state === "saving") return;
+        setState("saving");
+        const { data } = await sb.auth.getUser();
+        const user = data?.user;
+        if (!user) {
+          setState("error");
+          return;
+        }
+        const { error } = await sb.from("reviews").insert({
+          school_code: code.toUpperCase(),
+          user_id: user.id,
+          criteria: { csvc: Number(csvc), giang_vien: Number(teacher) },
+          comment: comment.trim() || null,
+        });
+        if (error) {
+          setState("error");
+          return;
+        }
+        setState("done");
+        router.refresh();
+      }}
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink">Cơ sở vật chất (1-5)</span>
+          <select value={csvc} onChange={(e) => setCsvc(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            {["5", "4", "3", "2", "1"].map((v) => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs font-semibold text-ink">Giảng viên (1-5)</span>
+          <select value={teacher} onChange={(e) => setTeacher(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            {["5", "4", "3", "2", "1"].map((v) => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="block">
+        <span className="mb-1 block text-xs font-semibold text-ink">Chia sẻ kinh nghiệm ôn thi</span>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="Điểm chuẩn các năm, cách ôn tổ hợp, đời sống sinh viên…"
+          className="w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+        />
+      </label>
+      {state === "error" ? (
+        <p className="text-sm text-red-600" role="alert">Gửi thất bại. Thử đăng nhập lại.</p>
+      ) : null}
+      <button
+        type="submit"
+        disabled={state === "saving"}
+        className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-60"
+      >
+        {state === "saving" ? "Đang gửi..." : "Gửi chia sẻ"}
+      </button>
+    </form>
+  );
+}
+
 /* ---------- Follow button + following list (profile-backed) ---------- */
 export function FollowButton({ code }: { code: string }) {
   const { profile, setProfile } = useProfile();
@@ -1105,7 +1282,8 @@ function GripIcon() {
   );
 }
 
-export function ReorderModal({ items, year }: { items: CutoffRow[]; year: number }) {
+export function ReorderModal({ items, year, score, combo }: { items: CutoffRow[]; year: number; score: number; combo: string }) {
+  const { token } = useSession();
   const [open, setOpen] = useState(false);
   const codes = useMemo(() => items.map((i) => i.code), [items]);
   const byCode = useMemo(() => new Map(items.map((i) => [i.code, i])), [items]);
@@ -1248,12 +1426,18 @@ export function ReorderModal({ items, year }: { items: CutoffRow[]; year: number
             </ol>
             <form action={saveAction} className="mt-4 flex items-center gap-3 border-t border-line-soft pt-4">
               <input type="hidden" name="order" value={JSON.stringify(order)} />
+              <input type="hidden" name="token" value={token ?? ""} />
+              <input type="hidden" name="onboarding" value={JSON.stringify({ score, combo, year })} />
               <button
                 type="submit"
                 disabled={isSaving}
                 className="h-11 flex-1 rounded-lg bg-cta text-sm font-semibold text-on-cta hover:bg-cta-hover disabled:opacity-60"
               >
-                {isSaving ? "Đang lưu..." : saved?.ok ? `Đã lưu ${saved.count} nguyện vọng ✓` : "Lưu thứ tự"}
+                {isSaving
+                  ? "Đang lưu..."
+                  : saved?.ok
+                    ? `Đã lưu ${saved.count} nguyện vọng ✓${saved.persisted ? " · đã đồng bộ" : ""}`
+                    : "Lưu thứ tự"}
               </button>
             </form>
           </div>

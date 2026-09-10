@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { SCHOOLS, MAJORS, toCard } from "../../mocks";
-import { parseYear } from "../../data";
+import { MAJORS, SCHOOLS, toCard } from "../../mocks";
+import { getSchools, parseYear } from "../../data";
 import { SchoolFilters, YearSelect } from "../../islands";
 
 export const metadata = { title: "Danh mục Trường & Điểm chuẩn - Compass" };
@@ -14,16 +14,17 @@ export default async function SchoolsPage({
   const query = (await searchParams) ?? {};
   const q = query.q ?? "";
   const year = parseYear(query.year);
-  const schools = SCHOOLS.map((t) => ({
+  const catalog = (await getSchools()) ?? SCHOOLS;
+  const schools = catalog.map((t) => ({
     ...toCard(t, year),
     kind: t.kind,
     region: t.region,
     groups: t.groups,
     majors: MAJORS.filter((n) => n.school_code === t.code).length,
   }));
-  const regions = [...new Set(SCHOOLS.map((t) => t.region))];
-  const groups = [...new Set(SCHOOLS.flatMap((t) => t.groups))];
-  const kinds = [...new Set(SCHOOLS.map((t) => t.kind))];
+  const regions = [...new Set(catalog.map((t) => t.region))];
+  const groups = [...new Set(catalog.flatMap((t) => t.groups))];
+  const kinds = [...new Set(catalog.map((t) => t.kind))];
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Điều hướng" className="text-[13px] text-muted">
@@ -54,7 +55,7 @@ export default async function SchoolsPage({
         <div>
           <dt className="sr-only">Số trường</dt>
           <dd className="text-2xl font-bold tabular-nums text-ink">
-            {SCHOOLS.length} <span className="text-sm font-medium text-muted">/ Trường</span>
+            {catalog.length} <span className="text-sm font-medium text-muted">/ Trường</span>
           </dd>
         </div>
         <div>

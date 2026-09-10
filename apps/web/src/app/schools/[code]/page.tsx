@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { TierBadge } from "@compass/ui";
 import { bucketCutoff, classifyBucket, cutoffForYear } from "@compass/ui";
-import { CURRENT_USER, REVIEWS, SCHOOLS, getMajorsBySchool, getSchool } from "../../../mocks";
-import { getCutoffsBySchool, getReviewsBySchool, parseYear } from "../../../data";
-import { DetailMajorFilter, FollowButton, YearSelect } from "../../../islands";
+import { CURRENT_USER, REVIEWS, SCHOOLS, getMajorsBySchool } from "../../../mocks";
+import { findSchool, getCutoffsBySchool, getReviewsBySchool, parseYear } from "../../../data";
+import { DetailMajorFilter, FollowButton, ReviewForm, YearSelect } from "../../../islands";
 
 export function generateStaticParams() {
   return SCHOOLS.map((t) => ({ code: t.code.toLowerCase() }));
@@ -13,7 +13,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const school = getSchool(code);
+  const school = await findSchool(code);
   return { title: school ? `${school.name} - Compass` : "Không tìm thấy trường - Compass" };
 }
 
@@ -25,7 +25,7 @@ export default async function SchoolDetailPage({
   searchParams?: Promise<{ year?: string }>;
 }) {
   const { code } = await params;
-  const school = getSchool(code);
+  const school = await findSchool(code);
   if (!school) notFound();
   const year = parseYear((await searchParams)?.year);
   const majors = (await getCutoffsBySchool(school.code, year)) ?? getMajorsBySchool(school.code);
@@ -162,15 +162,8 @@ export default async function SchoolDetailPage({
           <p className="mt-2 text-base leading-relaxed text-body">Tổng hợp {reviews.length} phản hồi.</p>
         ) : null}
         <div className="mt-4">
-            <button
-              type="button"
-              disabled
-              title="Gửi chia sẻ - cần tài khoản, sẽ có ở bước sau"
-              className="inline-flex h-11 cursor-not-allowed items-center rounded-lg border border-line bg-surface px-5 text-sm font-semibold text-ink opacity-60"
-            >
-              Gửi chia sẻ kinh nghiệm ôn thi
-            </button>
-          </div>
+          <ReviewForm code={school.code} />
+        </div>
           <div className="grid gap-4 md:grid-cols-3">
             {reviews.length > 0 ? (
               reviews.map((r) => (

@@ -1,13 +1,55 @@
+import { cache } from "react";
 import { getSupabase } from "@compass/db";
 import { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear, type YearCutoffs } from "@compass/ui";
-import type { Major, Review } from "./mocks";
+import { SCHOOLS, type Major, type Review, type School } from "./mocks";
 
 export { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear };
 export type { YearCutoffs };
 // ponytail: live Supabase for volatile data (cutoffs, reviews, rank distribution).
-// Curated catalog fields (groups, display tuition, region) have no DB columns yet,
-// so schools list stays on mocks until the schema grows them.
 // Null = no Supabase (use mocks in dev). [] = live but no rows (show empty state).
+
+// ponytail: live-first catalog; mock rows win on display fields, live-only schools append.
+// Selecting groups (migration 0003) fails pre-migration -> whole query errors -> mocks.
+export const getSchools = cache(async (): Promise<School[] | null> => {
+  const sb = getSupabase();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb
+      .from("schools")
+      .select("code,slug,name,province,region,kind,website,groups,tuition_display,address,name_en")
+      .order("code");
+    if (error || !data?.length) return null;
+    const merged: School[] = SCHOOLS.map((t) => ({ ...t }));
+    const mergedByCode = new Map(merged.map((t) => [t.code.toUpperCase(), t]));
+    for (const r of data) {
+      const code = String(r.code ?? "").toUpperCase();
+      if (!code) continue;
+      if (mergedByCode.has(code)) continue;
+      const groups = Array.isArray(r.groups) ? r.groups.filter((g) => typeof g === "string") : [];
+      merged.push({
+        code,
+        name: String(r.name ?? code),
+        name_en: String(r.name_en ?? ""),
+        address: String(r.address ?? ""),
+        kind: String(r.kind ?? ""),
+        region: String(r.province ?? r.region ?? ""),
+        groups,
+        tuition: String(r.tuition_display ?? "") || "Liên hệ trường",
+        main_combos: [],
+        trend: "flat",
+        cutoff2024: 0,
+      });
+    }
+    return merged;
+  } catch {
+    return null;
+  }
+});
+
+export async function findSchool(code: string): Promise<School | undefined> {
+  const schools = (await getSchools()) ?? SCHOOLS;
+  return schools.find((t) => t.code.toLowerCase() === code.toLowerCase());
+}
 
 export async function getCutoffsBySchool(code: string, year = DEFAULT_YEAR): Promise<Major[] | null> {
   const sb = getSupabase();
@@ -134,18 +176,19 @@ export async function rankFromDistribution(
   const sb = getSupabase();
   if (!sb) return null;
   // ponytail: nationwide = province_code null OR "" (pipeline writes "", seeds omit col)
+  // columns are English since migration 0002 (exam, curriculum)
   let q = sb
     .from("score_distribution")
-    .select("score,count,year,ky_thi,chuong_trinh")
+    .select("score,count,year,exam,curriculum")
     .eq("combo", combo.toUpperCase())
     .or("province_code.is.null,province_code.eq.")
     .order("year", { ascending: false })
     .limit(2000);
   if (opts?.year) q = q.eq("year", opts.year);
-  // exam values are "THPTQG 2025..." -> ky_thi THPTQG
+  // exam values are "THPTQG 2025..." -> exam THPTQG
   const examKey = opts?.exam ? String(opts.exam).split(" ")[0].toUpperCase() : "";
-  if (examKey) q = q.eq("ky_thi", examKey);
-  if (opts?.curriculum) q = q.eq("chuong_trinh", opts.curriculum.toUpperCase());
+  if (examKey) q = q.eq("exam", examKey);
+  if (opts?.curriculum) q = q.eq("curriculum", opts.curriculum.toUpperCase());
   const { data, error } = await q;
   if (error || !data?.length) return null;
   let total = 0;

@@ -17,4 +17,5 @@ Rebuild `data/` from web sources (writes intermediate `data/raw/`, `data/out/`, 
 - `import_daniele15.py` / `import_htnam2024.py` — normalize GitHub datasets
 - `prep_diemthi_2026.py` / `build_score_distribution.py` — bulk scores → distribution
 - `merge_cutoffs.py` → `build_seed.py` → `test_seed_postgres.py` — merge, clean, test COPY
+- `data/manual_schools.csv` (optional) — curated display columns (`groups`, `tuition_display`, `address`, `name_en`) merged into `schools.csv` by `build_seed.py`
 - `province_data.py` — map old department codes → new provinces (hardcoded instead of a CSV ref)

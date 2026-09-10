@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { BUCKET_META, PortfolioBar, bucketCutoff, cutoffForYear } from "@compass/ui";
 import { interpRank, rankPercentile } from "@compass/ui";
 import { CURRENT_USER, MAJORS, SCHOOLS } from "../../mocks";
-import { getCutoffMap, parseYear } from "../../data";
+import { getCutoffMap, getSchools, parseYear } from "../../data";
 import { SuggestionList, YearSelect } from "../../islands";
 
 export async function generateMetadata({
@@ -12,7 +12,8 @@ export async function generateMetadata({
   searchParams?: Promise<{ school?: string }>;
 }) {
   const ma = (await searchParams)?.school ?? "";
-  const school = SCHOOLS.find((t) => t.code.toLowerCase() === ma.toLowerCase());
+  const catalog = (await getSchools()) ?? SCHOOLS;
+  const school = catalog.find((t) => t.code.toLowerCase() === ma.toLowerCase());
   return {
     title: school ? `Gợi ý Nguyện vọng tại ${school.name} - Compass` : "Gợi ý Nguyện vọng Thông minh - Compass",
   };
@@ -32,7 +33,8 @@ export default async function SuggestionsPage({
   const region = params.region ?? "";
   const budget = params.budget ?? "";
   const strategy = params.strategy ?? "balanced";
-  const schoolFilter = SCHOOLS.find(
+  const catalog = (await getSchools()) ?? SCHOOLS;
+  const schoolFilter = catalog.find(
     (t) => t.code.toLowerCase() === (params.school ?? "").toLowerCase(),
   );
   const top = rankPercentile(interpRank(score));
@@ -55,7 +57,7 @@ export default async function SuggestionsPage({
   const scored = MAJORS.filter((n) => {
     if (!n.combos.includes(combo)) return false;
     if (schoolFilter && n.school_code !== schoolFilter.code) return false;
-    const school = SCHOOLS.find((t) => t.code === n.school_code);
+    const school = catalog.find((t) => t.code === n.school_code);
     if (group && school && !school.groups.includes(group)) return false;
     if ((region === "Hà Nội" || region === "TP.HCM") && school && school.region !== region) return false;
     if (!budgetOk(n.tuition) && school && !budgetOk(school.tuition)) return false;
@@ -67,7 +69,7 @@ export default async function SuggestionsPage({
     // ponytail: missing selected year = no delta; bucket falls back to latest, never fake safe
     const delta = selected > 0 ? score - selected : undefined;
     const tier = effective > 0 ? bucketOf(score - effective) : "match";
-    const school = SCHOOLS.find((t) => t.code === n.school_code);
+    const school = catalog.find((t) => t.code === n.school_code);
     return {
       code: n.code,
       name: `${n.name} - ${school?.name ?? n.school_code}`,
@@ -195,7 +197,7 @@ export default async function SuggestionsPage({
         </h2>
         <div className="mt-4">
           {scored.length > 0 ? (
-            <SuggestionList rows={scored} deltas={deltas} score={score} year={year} />
+            <SuggestionList rows={scored} deltas={deltas} score={score} combo={combo} year={year} />
           ) : (
             <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
               {schoolFilter ? (

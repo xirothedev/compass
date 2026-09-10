@@ -1,11 +1,13 @@
 import Link from "next/link";
-import { SCHOOLS, MAJORS, toCard } from "../../mocks";
+import { MAJORS, SCHOOLS, toCard } from "../../mocks";
+import { getSchools } from "../../data";
 import { FollowingList } from "../../islands";
 
 export const metadata = { title: "Danh sách theo dõi - Compass" };
 
-export default function FollowingPage() {
-  const cards = SCHOOLS.map((t) => toCard(t));
+export default async function FollowingPage() {
+  const catalog = (await getSchools()) ?? SCHOOLS;
+  const cards = catalog.map((t) => toCard(t));
   const majors = MAJORS.length;
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">

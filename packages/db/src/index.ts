@@ -46,3 +46,14 @@ export function getSupabase(): SupabaseClient | null {
 export function isSupabaseConfigured(): boolean {
   return getSupabase() !== null;
 }
+
+/** Authenticated client for server actions: RLS sees auth.uid() from the user's JWT. */
+export function getUserSupabase(accessToken: string): SupabaseClient | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_ANON_KEY;
+  if (!url || !key || !accessToken) return null;
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}

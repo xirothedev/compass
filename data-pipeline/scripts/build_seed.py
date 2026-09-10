@@ -158,9 +158,32 @@ def main():
         if s["slug"] in seen_slug:
             s["slug"] = f"{s['slug']}-{s['school_code'].lower()}"; for_rename += 1
         seen_slug.add(s["slug"])
+    try:
+        with open(base / "manual_schools.csv", encoding="utf-8-sig") as f:
+            overlaid = 0
+            for r in csv.DictReader(f):
+                code = (r.get("code") or "").strip().upper()
+                if not code or code not in schools: continue
+                if r.get("groups"):
+                    groups = [g.strip() for g in r["groups"].split(";") if g.strip()] or [r["groups"].strip()]
+                    schools[code]["groups"] = "{" + ",".join('"' + g.replace('"', '\\"') + '"' for g in groups) + "}"
+                for k in ("tuition_display", "address", "name_en"):
+                    if r.get(k): schools[code][k] = r[k].strip()
+                overlaid += 1
+        report.append(f"schools display overlay: {overlaid} curated")
+    except FileNotFoundError:
+        pass
+    for sc in schools.values():
+        sc.setdefault("groups", "{}")
+        for k in ("tuition_display", "address", "name_en"):
+            sc.setdefault(k, "")
     with open(seed / "schools.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["school_code","slug","name","province","region","kind","website","source_url"])
-        w.writeheader(); w.writerows(schools.values())
+        w = csv.DictWriter(f, fieldnames=["code","slug","name","province","region","kind","website","source_url","groups","tuition_display","address","name_en"])
+        w.writeheader()
+        for sc in schools.values():
+            row = {k: sc.get(k, "") for k in ["slug","name","province","region","kind","website","source_url","groups","tuition_display","address","name_en"]}
+            row["code"] = sc.get("school_code", "")
+            w.writerow(row)
     report.append(f"schools seed: {len(schools)} (slug collisions renamed: {for_rename})")
 
     # ---- 2) CUTOFFS: validate range + keys ----

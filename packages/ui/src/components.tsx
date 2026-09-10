@@ -126,9 +126,11 @@ export function SchoolCard({ school }: { school: SchoolCardData }) {
         </div>
       </dl>
       <div className="flex flex-col gap-1 text-[13px] text-muted">
-        <p>
-          Tổ hợp chủ lực: <span className="font-semibold text-ink">{school.combos.join(", ")}</span>
-        </p>
+        {school.combos.length ? (
+          <p>
+            Tổ hợp chủ lực: <span className="font-semibold text-ink">{school.combos.join(", ")}</span>
+          </p>
+        ) : null}
         {typeof school.majors === "number" ? (
           <p>
             Ngành tuyển sinh: <span className="font-semibold tabular-nums text-ink">{school.majors} mã ngành</span>
