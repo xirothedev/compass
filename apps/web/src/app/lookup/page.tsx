@@ -15,7 +15,7 @@ export default async function LookupPage({
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <p className="mx-auto w-fit rounded-full bg-[var(--secondary-container)] px-3 py-1.5 text-center text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
-        Dữ liệu kỳ thi 2025 · Chuẩn hóa GDPT 2018 &amp; 2006 · Bảo mật không cần SBD
+        Dữ liệu Kỳ thi THPTQG 2025 · CT2018 &amp; CT2006 · Bảo mật không cần SBD
       </p>
       <div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>

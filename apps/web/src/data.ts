@@ -32,7 +32,7 @@ export async function getCutoffsBySchool(code: string): Promise<Major[] | null> 
         name: m.major_name,
         school_code: upper,
         combos,
-        methods: ["Thi tốt nghiệp THPTQG"],
+        methods: ["THPTQG"],
         cutoffs: {
           y2022: Number.isFinite(y.y2022) ? y.y2022 : 0,
           y2023: Number.isFinite(y.y2023) ? y.y2023 : 0,
@@ -53,19 +53,26 @@ export async function getReviewsBySchool(code: string): Promise<Review[] | null>
   try {
     const { data, error } = await sb
       .from("reviews")
-      .select("comment")
+      .select("comment,criteria")
       .eq("school_code", code.toUpperCase())
       .eq("status", "published")
       .limit(6);
     if (error || !data?.length) return null;
     return data
-      .filter((r) => r.comment)
-      .map((r, i) => ({
-        author: `Người dùng ${i + 1}`,
-        role: "Đã xác thực",
-        content: r.comment as string,
-        school_code: code.toUpperCase(),
-      }));
+      .filter((r) => r.comment || (r.criteria as Record<string, number> | null))
+      .map((r, i) => {
+        const criteria = (r.criteria as Record<string, number> | null) ?? undefined;
+        const vals = criteria ? Object.values(criteria).filter((v) => Number.isFinite(v)) : [];
+        const rating = vals.length ? vals.reduce((a, b) => a + Number(b), 0) / vals.length : undefined;
+        return {
+          author: `Người dùng ${i + 1}`,
+          role: "Đã xác thực",
+          content: (r.comment as string) || "Đánh giá theo tiêu chí.",
+          school_code: code.toUpperCase(),
+          rating,
+          criteria,
+        };
+      });
   } catch {
     return null;
   }
@@ -74,16 +81,24 @@ export async function getReviewsBySchool(code: string): Promise<Review[] | null>
 export async function rankFromDistribution(
   score: number,
   combo: string,
+  opts?: { exam?: string; year?: number; curriculum?: string },
 ): Promise<{ rank: number; percentile: number } | null> {
   const sb = getSupabase();
   if (!sb) return null;
-  const { data, error } = await sb
+  // ponytail: nationwide = province_code null OR "" (pipeline writes "", seeds omit col)
+  let q = sb
     .from("score_distribution")
-    .select("score,count")
+    .select("score,count,year,ky_thi,chuong_trinh")
     .eq("combo", combo.toUpperCase())
-    .is("province_code", null)
+    .or("province_code.is.null,province_code.eq.")
     .order("year", { ascending: false })
     .limit(2000);
+  if (opts?.year) q = q.eq("year", opts.year);
+  // exam values are "THPTQG 2025..." -> ky_thi THPTQG
+  const examKey = opts?.exam ? String(opts.exam).split(" ")[0].toUpperCase() : "";
+  if (examKey) q = q.eq("ky_thi", examKey);
+  if (opts?.curriculum) q = q.eq("chuong_trinh", opts.curriculum.toUpperCase());
+  const { data, error } = await q;
   if (error || !data?.length) return null;
   let total = 0;
   let above = 0;

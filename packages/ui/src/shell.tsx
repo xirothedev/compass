@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 const NAV = [
   { href: "/lookup", label: "Tra cứu" },
   { href: "/schools", label: "Trường" },
-  { href: "/onboarding", label: "Onboarding" },
+  { href: "/onboarding", label: "Định hướng" },
   { href: "/suggestions", label: "Gợi ý nguyện vọng" },
   { href: "/following", label: "Theo dõi" },
 ];

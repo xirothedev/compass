@@ -129,6 +129,8 @@ export type CutoffRow = {
   y2024: number;
   tier: Bucket;
   delta?: number;
+  quota?: string;
+  tuition?: string;
 };
 
 export const BUCKET_RANGE: Record<Bucket, string> = {
@@ -159,7 +161,9 @@ export function BucketHeader({ tier, count }: { tier: Bucket; count: number }) {
 // Delta column appears only when rows carry it (suggestions, not detail).
 export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankOffset?: number }) {
   const showDelta = rows.some((r) => typeof r.delta === "number");
-  const head = ["Mã ngành", "Tên chương trình / Ngành đào tạo", "Tổ hợp môn", "Phương thức", "2022", "2023", "2024"];
+  const showMeta = rows.some((r) => r.quota || r.tuition);
+  const head = ["Mã ngành", "Ngành đào tạo", "Tổ hợp môn", "Phương thức", "2022", "2023", "2024"];
+  if (showMeta) head.push("Chỉ tiêu · Học phí");
   if (showDelta) head.push("Chênh lệch");
   head.push("Đánh giá");
   return (
@@ -207,6 +211,11 @@ export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankO
                 </strong>
               </p>
             ) : null}
+            {r.quota || r.tuition ? (
+              <p className="mt-2 text-[13px] text-muted">
+                {[r.quota, r.tuition].filter(Boolean).join(" · ")}
+              </p>
+            ) : null}
           </article>
         ))}
       </div>
@@ -235,6 +244,11 @@ export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankO
                   {y.toFixed(2)}
                 </td>
               ))}
+              {showMeta ? (
+                <td className="px-3 py-3 text-[13px] text-muted">
+                  {[r.quota, r.tuition].filter(Boolean).join(" · ") || "—"}
+                </td>
+              ) : null}
               {showDelta ? (
                 <td className="px-3 py-3 font-semibold tabular-nums text-ink">
                   {typeof r.delta === "number"

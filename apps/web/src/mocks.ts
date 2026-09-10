@@ -25,7 +25,7 @@ export type Major = {
   tuition: string;
 };
 
-export type Review = { author: string; role: string; content: string; school_code: string };
+export type Review = { author: string; role: string; content: string; school_code: string; rating?: number; criteria?: Record<string, number> };
 
 export const CURRENT_USER = { application_code: "HS-2025-HN9", score: 26.85, combo: "A00" };
 
@@ -67,7 +67,7 @@ export const MAJORS: Major[] = [
   major("IT1", "Khoa học Máy tính - Chương trình Chuẩn", "BKA", ["A00", "A01", "K01"], [27.8, 28.2, 28.5], "Chỉ tiêu A00: ~240 sinh viên"),
   major("IT2", "Kỹ thuật Máy tính", "BKA", ["A00", "A01"], [27.1, 27.5, 27.9], "Chỉ tiêu: ~200 sinh viên"),
   major("EE2", "Kỹ thuật Điều khiển và Tự động hóa", "BKA", ["A00", "A01"], [26.4, 26.9, 27.3], "Chỉ tiêu: ~320 sinh viên"),
-  major("ME1", "Kỹ thuật Cơ điện tử (Mechatronics Engineering)", "BKA", ["A00", "A01"], [25.8, 26.2, 26.6], "Chỉ tiêu: ~280 sinh viên"),
+  major("ME1", "Kỹ thuật Cơ điện tử", "BKA", ["A00", "A01"], [25.8, 26.2, 26.6], "Chỉ tiêu: ~280 sinh viên"),
   major("CH1", "Kỹ thuật Hóa học", "BKA", ["A00", "B00"], [23.5, 23.9, 24.3], "Chỉ tiêu: ~250 sinh viên"),
   major("EV1", "Kỹ thuật Môi trường", "BKA", ["A00", "B00", "D07"], [22.1, 22.6, 23.0], "Chỉ tiêu: ~150 sinh viên"),
   major("EC1", "Điện tử - Viễn thông", "BKA", ["A00", "A01"], [26.0, 26.5, 26.9], "Chỉ tiêu: ~400 sinh viên"),

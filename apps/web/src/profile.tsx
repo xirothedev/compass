@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-// ponytail: one profile object (score/combo/group/region/strategy) shared by
+// ponytail: one profile object (score/combo/group/region/budget/strategy) shared by
 // onboarding, lookup and suggestions via localStorage + URL params. No backend yet.
 export type Profile = {
   score: string;
   combo: string;
   group: string;
   region: string;
+  budget: string;
   strategy: string;
   followed: string[];
 };
@@ -18,6 +19,7 @@ const DEFAULTS: Profile = {
   combo: "A00",
   group: "Kỹ thuật - Công nghệ",
   region: "Hà Nội",
+  budget: "Không giới hạn",
   strategy: "balanced",
   followed: [],
 };
@@ -35,6 +37,7 @@ function load(): Profile {
       combo: typeof p.combo === "string" ? p.combo : DEFAULTS.combo,
       group: typeof p.group === "string" ? p.group : DEFAULTS.group,
       region: typeof p.region === "string" ? p.region : DEFAULTS.region,
+      budget: typeof p.budget === "string" ? p.budget : DEFAULTS.budget,
       strategy: typeof p.strategy === "string" ? p.strategy : DEFAULTS.strategy,
       followed: Array.isArray(p.followed) ? p.followed.filter((c) => typeof c === "string") : [],
     };
