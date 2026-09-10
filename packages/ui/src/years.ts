@@ -17,3 +17,23 @@ export function cutoffForYear(cutoffs: YearCutoffs, year: number): number {
   if (year === 2022) return cutoffs.y2022;
   return cutoffs.y2024;
 }
+
+// ponytail: 0 = no data for that year; newest non-zero wins
+export function latestCutoff(cutoffs: YearCutoffs): number {
+  if (cutoffs.y2025 > 0) return cutoffs.y2025;
+  if (cutoffs.y2024 > 0) return cutoffs.y2024;
+  if (cutoffs.y2023 > 0) return cutoffs.y2023;
+  if (cutoffs.y2022 > 0) return cutoffs.y2022;
+  return 0;
+}
+
+// ponytail: bucket uses selected year; latest fallback so missing never fakes safe
+export function bucketCutoff(cutoffs: YearCutoffs, year: number): number {
+  const selected = cutoffForYear(cutoffs, year);
+  return selected > 0 ? selected : latestCutoff(cutoffs);
+}
+
+// ponytail: one missing-score display for cards, tables, reorder list
+export function formatScore(value: number): string {
+  return value > 0 ? value.toFixed(2) : "—";
+}

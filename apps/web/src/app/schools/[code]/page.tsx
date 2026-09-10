@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { TierBadge } from "@compass/ui";
-import { classifyBucket } from "@compass/ui";
-import { CURRENT_USER, REVIEWS, SCHOOLS, cutoffForYear, getMajorsBySchool, getSchool } from "../../../mocks";
+import { bucketCutoff, classifyBucket, cutoffForYear } from "@compass/ui";
+import { CURRENT_USER, REVIEWS, SCHOOLS, getMajorsBySchool, getSchool } from "../../../mocks";
 import { getCutoffsBySchool, getReviewsBySchool, parseYear } from "../../../data";
 import { DetailMajorFilter, FollowButton, YearSelect } from "../../../islands";
 
@@ -30,19 +30,23 @@ export default async function SchoolDetailPage({
   const year = parseYear((await searchParams)?.year);
   const majors = (await getCutoffsBySchool(school.code, year)) ?? getMajorsBySchool(school.code);
   const normMethod = (m: string) => (m.includes("THPTQG") || m === "THPTQG" ? "THPTQG" : m.includes("TSA") ? "TSA" : m);
-  const rows = majors.map((m) => ({
-    code: m.code,
-    name: m.name,
-    combos: m.combos.join(", "),
-    method: normMethod(m.methods[0]),
-    y2022: m.cutoffs.y2022,
-    y2023: m.cutoffs.y2023,
-    y2024: m.cutoffs.y2024,
-    y2025: m.cutoffs.y2025,
-    tier: classifyBucket(CURRENT_USER.score - cutoffForYear(m.cutoffs, year)),
-    quota: (m as { quota?: string }).quota ?? "",
-    tuition: (m as { tuition?: string }).tuition ?? "",
-  }));
+  const rows = majors.map((m) => {
+    // ponytail: missing selected year falls back to latest for the badge, never fake safe
+    const effective = bucketCutoff(m.cutoffs, year);
+    return {
+      code: m.code,
+      name: m.name,
+      combos: m.combos.join(", "),
+      method: normMethod(m.methods[0]),
+      y2022: m.cutoffs.y2022,
+      y2023: m.cutoffs.y2023,
+      y2024: m.cutoffs.y2024,
+      y2025: m.cutoffs.y2025,
+      tier: effective > 0 ? classifyBucket(CURRENT_USER.score - effective) : "match",
+      quota: (m as { quota?: string }).quota ?? "",
+      tuition: (m as { tuition?: string }).tuition ?? "",
+    };
+  });
   const combos = [...new Set(majors.flatMap((m) => m.combos))];
   const methods = [...new Set(majors.flatMap((m) => m.methods.map(normMethod)))];
   const cutoffs = majors.map((m) => cutoffForYear(m.cutoffs, year)).filter((v) => v > 0);
@@ -99,7 +103,7 @@ export default async function SchoolDetailPage({
           </p>
           <div className="mt-4 flex flex-col gap-2">
             <Link
-              href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}`}
+              href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}&year=${year}`}
               className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-accent hover:bg-accent-hover"
             >
               Tạo gợi ý nguyện vọng
@@ -193,7 +197,7 @@ export default async function SchoolDetailPage({
           Điểm của bạn có cơ hội trúng tuyển ngành nào tại {school.name}?
         </h2>
         <Link
-          href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}`}
+          href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}&year=${year}`}
           className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#006972] px-6 text-sm font-semibold text-white hover:bg-[#00838f]"
         >
           Xem cơ hội trúng tuyển

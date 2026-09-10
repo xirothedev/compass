@@ -121,10 +121,11 @@ export function getSchool(code: string): School | undefined {
 
 // ponytail: one mapper for SCHOOLS -> SchoolCard shape, shared by home + schools pages
 
+// ponytail: 0 = no data for that year; cards render — instead of a stale year
 export function getSchoolCutoff(code: string, year: number): number {
   const majors = MAJORS.filter((n) => n.school_code === code);
   const vals = majors.map((m) => cutoffForYear(m.cutoffs, year)).filter((v) => v > 0);
-  if (!vals.length) return getSchool(code)?.cutoff2024 ?? 0;
+  if (!vals.length) return 0;
   return Math.max(...vals);
 }
 

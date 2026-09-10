@@ -2,6 +2,7 @@
 // ponytail: colors via semantic vars (--surface, --ink...) so .dark flips with zero per-mode code
 import type { ReactNode } from "react";
 import { BUCKET_META, type Bucket } from "./buckets";
+import { formatScore } from "./years";
 
 export function TierBadge({ tier, className = "" }: { tier: Bucket; className?: string }) {
   const m = BUCKET_META[tier];
@@ -113,7 +114,7 @@ export function SchoolCard({ school }: { school: SchoolCardData }) {
       <dl className="grid grid-cols-3 gap-2 rounded-xl bg-surface-2 p-3 text-center">
         <div>
           <dt className="text-[11px] text-muted">Điểm chuẩn {school.year}</dt>
-          <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">{school.cutoff.toFixed(2)}</dd>
+          <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">{formatScore(school.cutoff)}</dd>
         </div>
         <div>
           <dt className="text-[11px] text-muted">Xu hướng 3 năm</dt>
@@ -230,7 +231,7 @@ export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankO
                 >
                   <dt className="text-[11px] font-medium text-muted">{label}</dt>
                   <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">
-                    {(value as number).toFixed(2)}
+                    {formatScore(value as number)}
                   </dd>
                 </div>
               ))}
@@ -273,7 +274,7 @@ export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankO
               <td className="px-3 py-3 text-muted">{r.method}</td>
               {[r.y2022, r.y2023, r.y2024, r.y2025].map((y, j) => (
                 <td key={j} className="px-3 py-3 font-semibold tabular-nums text-ink">
-                  {y.toFixed(2)}
+                  {formatScore(y)}
                 </td>
               ))}
               {showMeta ? (

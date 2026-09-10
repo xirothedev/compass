@@ -1,8 +1,9 @@
 import { getSupabase } from "@compass/db";
-import { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear } from "@compass/ui";
+import { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear, type YearCutoffs } from "@compass/ui";
 import type { Major, Review } from "./mocks";
 
 export { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear };
+export type { YearCutoffs };
 // ponytail: live Supabase for volatile data (cutoffs, reviews, rank distribution).
 // Curated catalog fields (groups, display tuition, region) have no DB columns yet,
 // so schools list stays on mocks until the schema grows them.
@@ -14,19 +15,14 @@ export async function getCutoffsBySchool(code: string, year = DEFAULT_YEAR): Pro
   try {
     const upper = code.toUpperCase();
     const selectedYear = parseYear(year);
-    const [majorsRes, cutsRes] = await Promise.all([
+    const [{ data: majors }, { data: cuts }] = await Promise.all([
       sb.from("majors").select("major_code,major_name,combos,quota,tuition_per_year").eq("school_code", upper).eq("year", selectedYear),
       sb.from("cutoffs").select("major_code,combo,year,score").eq("school_code", upper).in("year", [2022, 2023, 2024, 2025]).eq("method", "THPTQG"),
     ]);
-    let majors = majorsRes.data;
-    if (!majors?.length) {
-      // ponytail: majors are versioned per year; fall back to 2024 list so old rows still show
-      const fb = await sb.from("majors").select("major_code,major_name,combos,quota,tuition_per_year").eq("school_code", upper).eq("year", 2024);
-      majors = fb.data;
-    }
+    // ponytail: no cross-year fallback; empty majors = empty state for that year
     if (!majors?.length) return [];
     const byYear = new Map<string, { y2022: number; y2023: number; y2024: number; y2025: number }>();
-    for (const c of cutsRes.data ?? []) {
+    for (const c of cuts ?? []) {
       const k = `${c.major_code}|${c.combo ?? ""}`;
       const e = byYear.get(k) ?? { y2022: NaN, y2023: NaN, y2024: NaN, y2025: NaN };
       if (c.year === 2022) e.y2022 = Number(c.score);
@@ -57,6 +53,44 @@ export async function getCutoffsBySchool(code: string, year = DEFAULT_YEAR): Pro
     });
   } catch {
     return [];
+  }
+}
+
+// ponytail: bulk overlay for suggestions (mock catalog + live cutoffs).
+// Key SCHOOL|MAJOR; exact-combo rows win over combo-null rows per year. Null = no Supabase.
+export async function getCutoffMap(combo: string): Promise<Map<string, YearCutoffs> | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+  try {
+    const c = combo.toUpperCase();
+    const { data, error } = await sb
+      .from("cutoffs")
+      .select("school_code,major_code,combo,year,score")
+      .in("year", [2022, 2023, 2024, 2025])
+      .eq("method", "THPTQG")
+      .or(`combo.eq.${c},combo.is.null`);
+    const map = new Map<string, YearCutoffs>();
+    if (error || !data) return map;
+    const exactYear = new Set<string>();
+    for (const r of data) {
+      const key = `${String(r.school_code).toUpperCase()}|${String(r.major_code)}`;
+      const y = Number(r.year);
+      if (y !== 2022 && y !== 2023 && y !== 2024 && y !== 2025) continue;
+      const isExact = String(r.combo ?? "").toUpperCase() === c;
+      const ek = `${key}|${y}`;
+      if (!isExact && exactYear.has(ek)) continue;
+      const e = map.get(key) ?? { y2022: 0, y2023: 0, y2024: 0, y2025: 0 };
+      const v = Number(r.score) || 0;
+      if (y === 2022) e.y2022 = v;
+      else if (y === 2023) e.y2023 = v;
+      else if (y === 2024) e.y2024 = v;
+      else e.y2025 = v;
+      map.set(key, e);
+      if (isExact) exactYear.add(ek);
+    }
+    return map;
+  } catch {
+    return new Map();
   }
 }
 

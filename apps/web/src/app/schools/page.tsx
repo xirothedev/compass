@@ -11,9 +11,9 @@ export default async function SchoolsPage({
 }: {
   searchParams?: Promise<{ q?: string; year?: string }>;
 }) {
-  const sp = (await searchParams) ?? {};
-  const q = sp.q ?? "";
-  const year = parseYear(sp.year);
+  const query = (await searchParams) ?? {};
+  const q = query.q ?? "";
+  const year = parseYear(query.year);
   const schools = SCHOOLS.map((t) => ({
     ...toCard(t, year),
     kind: t.kind,

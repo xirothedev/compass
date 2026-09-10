@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, YearSwitcher, AVAILABLE_YEARS, cutoffForYear, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, YearSwitcher, AVAILABLE_YEARS, cutoffForYear, formatScore, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import { calcRank, saveOrder } from "./actions";
 import { MAJORS } from "./mocks";
@@ -966,8 +966,10 @@ export function ExportCsv({ rows }: { rows: CutoffRow[] }) {
   const download = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const head = ["Thứ tự", "Mã ngành", "Tên Ngành đào tạo", "Tổ hợp", "Phương thức", "2022", "2023", "2024", "2025", "Đánh giá"];
+    // ponytail: missing scores export as blank, not 0.00
+    const cell = (v: number) => (v > 0 ? v.toFixed(2) : "");
     const lines = rows.map((r, i) =>
-      [i + 1, r.code, r.name, r.combos, r.method, r.y2022.toFixed(2), r.y2023.toFixed(2), r.y2024.toFixed(2), r.y2025.toFixed(2), BUCKET_META[r.tier].label]
+      [i + 1, r.code, r.name, r.combos, r.method, cell(r.y2022), cell(r.y2023), cell(r.y2024), cell(r.y2025), BUCKET_META[r.tier].label]
         .map(esc)
         .join(","),
     );
@@ -1228,7 +1230,7 @@ export function ReorderModal({ items, year }: { items: CutoffRow[]; year: number
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">{item.name}</span>
                       <span className="text-xs tabular-nums text-muted">
-                        {item.code} • {cutoffByYear(item, year).toFixed(2)}
+                        {item.code} • {formatScore(cutoffByYear(item, year))}
                       </span>
                     </span>
                     <TierBadge tier={item.tier} />

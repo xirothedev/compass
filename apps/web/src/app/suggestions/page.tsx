@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { BUCKET_META, PortfolioBar } from "@compass/ui";
+import { BUCKET_META, PortfolioBar, bucketCutoff, cutoffForYear } from "@compass/ui";
 import { interpRank, rankPercentile } from "@compass/ui";
-import { CURRENT_USER, MAJORS, SCHOOLS, cutoffForYear } from "../../mocks";
-import { parseYear } from "../../data";
+import { CURRENT_USER, MAJORS, SCHOOLS } from "../../mocks";
+import { getCutoffMap, parseYear } from "../../data";
 import { SuggestionList, YearSelect } from "../../islands";
 
 export async function generateMetadata({
@@ -50,6 +50,8 @@ export default async function SuggestionsPage({
     if (budget.startsWith("Trên 32")) return hi > 32;
     return true;
   };
+  // ponytail: mock catalog for filters + live cutoff overlay when Supabase answers
+  const liveCutoffs = await getCutoffMap(combo);
   const scored = MAJORS.filter((n) => {
     if (!n.combos.includes(combo)) return false;
     if (schoolFilter && n.school_code !== schoolFilter.code) return false;
@@ -59,18 +61,23 @@ export default async function SuggestionsPage({
     if (!budgetOk(n.tuition) && school && !budgetOk(school.tuition)) return false;
     return true;
   }).map((n) => {
-    const delta = score - cutoffForYear(n.cutoffs, year);
+    const cutoffs = liveCutoffs?.get(`${n.school_code}|${n.code}`) ?? n.cutoffs;
+    const selected = cutoffForYear(cutoffs, year);
+    const effective = bucketCutoff(cutoffs, year);
+    // ponytail: missing selected year = no delta; bucket falls back to latest, never fake safe
+    const delta = selected > 0 ? score - selected : undefined;
+    const tier = effective > 0 ? bucketOf(score - effective) : "match";
     const school = SCHOOLS.find((t) => t.code === n.school_code);
     return {
       code: n.code,
       name: `${n.name} - ${school?.name ?? n.school_code}`,
       combos: n.combos.join(", "),
       method: "THPTQG",
-      y2022: n.cutoffs.y2022,
-      y2023: n.cutoffs.y2023,
-      y2024: n.cutoffs.y2024,
-      y2025: n.cutoffs.y2025,
-      tier: bucketOf(delta),
+      y2022: cutoffs.y2022,
+      y2023: cutoffs.y2023,
+      y2024: cutoffs.y2024,
+      y2025: cutoffs.y2025,
+      tier,
       delta,
       quota: n.quota,
       tuition: n.tuition,
@@ -144,7 +151,7 @@ export default async function SuggestionsPage({
             {scored.length} nguyện vọng hợp tổ hợp {combo}
           </p>
           <Link
-            href={`/suggestions?score=${score.toFixed(2)}&combo=${encodeURIComponent(combo)}`}
+            href={`/suggestions?score=${score.toFixed(2)}&combo=${encodeURIComponent(combo)}&year=${year}`}
             className="ml-auto text-sm font-semibold text-[var(--accent)] hover:underline"
           >
             Xem tất cả trường →
@@ -195,7 +202,7 @@ export default async function SuggestionsPage({
                 <>
                   {schoolFilter.name} chưa có ngành nào xét tổ hợp {combo} trong dữ liệu mẫu.{" "}
                   <Link
-                    href={`/suggestions?score=${score.toFixed(2)}&combo=${encodeURIComponent(combo)}`}
+                    href={`/suggestions?score=${score.toFixed(2)}&combo=${encodeURIComponent(combo)}&year=${year}`}
                     className="font-semibold text-[var(--accent)] hover:underline"
                   >
                     Xem tất cả trường
