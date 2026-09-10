@@ -2,7 +2,7 @@
 
 Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
 
-> This repo currently has no GitHub remote. Once a remote is created + `gh auth login` runs, the skills can operate on issues. Only then create the `needs-triage`… labels in the repo.
+> Remote is `origin` (`xirothedev/compass`) and the `needs-triage`… labels exist. Skills can operate on issues directly.
 
 ## Conventions
 

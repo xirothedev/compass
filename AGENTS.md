@@ -4,7 +4,7 @@
 
 ### Issue tracker
 
-Issues live as GitHub issues (repo has no remote yet — see the note in the file). See `docs/agents/issue-tracker.md`.
+Issues live as GitHub issues (remote `origin`, `xirothedev/compass`). See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
