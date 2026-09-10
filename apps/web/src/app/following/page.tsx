@@ -19,7 +19,7 @@ export default function FollowingPage() {
         Danh sách theo dõi
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
-        Các trường bạn lưu để đối chiếu điểm chuẩn và tạo gợi ý nguyện vọng. Tổng hợp từ {majors} mã ngành trong dữ liệu mẫu.
+        Các Trường bạn lưu để đối chiếu Điểm chuẩn và tạo Gợi ý Nguyện vọng. Tổng hợp từ {majors} mã Ngành trong dữ liệu mẫu.
       </p>
       <div className="mt-8">
         <FollowingList schools={cards} />

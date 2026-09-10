@@ -21,17 +21,21 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
   const school = getSchool(code);
   if (!school) notFound();
   const majors = (await getCutoffsBySchool(school.code)) ?? getMajorsBySchool(school.code);
+  const normMethod = (m: string) => (m.includes("THPTQG") || m === "THPTQG" ? "THPTQG" : m.includes("TSA") ? "TSA" : m);
   const rows = majors.map((m) => ({
     code: m.code,
     name: m.name,
     combos: m.combos.join(", "),
-    method: m.methods[0],
+    method: normMethod(m.methods[0]),
     y2022: m.cutoffs.y2022,
     y2023: m.cutoffs.y2023,
     y2024: m.cutoffs.y2024,
     tier: classifyBucket(CURRENT_USER.score - m.cutoffs.y2024),
+    quota: (m as { quota?: string }).quota ?? "",
+    tuition: (m as { tuition?: string }).tuition ?? "",
   }));
   const combos = [...new Set(majors.flatMap((m) => m.combos))];
+  const methods = [...new Set(majors.flatMap((m) => m.methods.map(normMethod)))];
   const cutoffs = majors.map((m) => m.cutoffs.y2024).filter((v) => v > 0);
   const lo = cutoffs.length ? Math.min(...cutoffs) : 0;
   const hi = cutoffs.length ? Math.max(...cutoffs) : 0;
@@ -62,7 +66,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
           </p>
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
-              ["Chương trình đào tạo", `${majors.length} ngành`],
+              ["Ngành đào tạo", `${majors.length} ngành`],
               ["Biên độ điểm 2024", cutoffs.length ? `${lo.toFixed(2)} – ${hi.toFixed(2)}` : "—"],
               ["Học phí chuẩn", school.tuition],
               ["Tổ hợp chủ lực", school.main_combos.join(" · ")],
@@ -112,7 +116,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
           Bảng tra cứu Điểm chuẩn &amp; Ngành đào tạo (2022 - 2024)
         </h2>
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-body">
-          Đối sánh điểm trúng tuyển theo phương thức Thi THPT Quốc gia.
+          Đối sánh Điểm chuẩn theo Phương thức xét tuyển THPTQG.
         </p>
         <div id="diem-chuan" className="mt-4 scroll-mt-32">
           <div className="mb-3 flex gap-2">
@@ -120,14 +124,14 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
             <TierBadge tier="match" />
             <TierBadge tier="reach" />
           </div>
-          <DetailMajorFilter rows={rows} combos={combos} />
+          <DetailMajorFilter rows={rows} combos={combos} methods={methods} />
         </div>
       </section>
 
       <div id="danh-gia" className="mt-10 scroll-mt-32 border-t border-line pt-10">
-        <p className="text-xs font-semibold tracking-[0.04em] text-[var(--accent)] uppercase">Review</p>
+        <p className="text-xs font-semibold tracking-[0.04em] text-[var(--accent)] uppercase">Đánh giá</p>
         <h2 className="mt-2 text-[22px] font-semibold leading-[30px] tracking-tight text-ink">
-          Đánh giá &amp; Review từ thí sinh trúng tuyển &amp; sinh viên
+          Đánh giá từ Thí sinh trúng tuyển &amp; sinh viên
         </h2>
         {reviews.length > 0 ? (
           <p className="mt-2 text-base leading-relaxed text-body">Tổng hợp {reviews.length} phản hồi.</p>
@@ -146,14 +150,19 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
             {reviews.length > 0 ? (
               reviews.map((r) => (
                 <figure key={r.author} className="rounded-2xl bg-surface p-5 shadow-sm">
-                  <blockquote className="text-sm leading-relaxed text-body">“{r.content}”</blockquote>
+                  {typeof r.rating === "number" ? (
+                    <p className="text-sm font-bold tabular-nums text-ink" aria-label={`Đánh giá ${r.rating.toFixed(1)} trên 5`}>
+                      ★ {r.rating.toFixed(1)}/5
+                    </p>
+                  ) : null}
+                  <blockquote className="mt-1 text-sm leading-relaxed text-body">“{r.content}”</blockquote>
                   <figcaption className="mt-3 text-[13px] font-semibold text-ink">
                     {r.author} <span className="font-normal text-muted">• {r.role}</span>
                   </figcaption>
                 </figure>
               ))
             ) : (
-              <p className="text-sm text-muted">Chưa có review cho trường này. Hãy là người đầu tiên chia sẻ.</p>
+              <p className="text-sm text-muted">Chưa có đánh giá cho Trường này. Hãy là người đầu tiên chia sẻ.</p>
             )}
           </div>
       </div>
@@ -166,7 +175,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
           href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}`}
           className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#006972] px-6 text-sm font-semibold text-white hover:bg-[#00838f]"
         >
-          Mô phỏng cơ hội trúng tuyển
+          Xem cơ hội trúng tuyển
         </Link>
       </div>
       <p className="mt-4 text-[13px] text-muted">

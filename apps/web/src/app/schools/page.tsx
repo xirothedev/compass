@@ -34,14 +34,14 @@ export default async function SchoolsPage({
       </nav>
       <div className="mt-2 flex flex-wrap gap-2">
         <span className="rounded-full bg-[var(--secondary-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
-          Tuyển sinh Đại học 2025
+          Tuyển sinh THPTQG 2025
         </span>
         <span className="rounded-full bg-[var(--secondary-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
           Cập nhật Đề án mới nhất
         </span>
       </div>
       <h1 className="mt-3 text-[32px] font-bold leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-[48px]">
-        Danh mục Trường &amp; Điểm chuẩn Đại học
+        Danh mục Trường &amp; Điểm chuẩn
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
         Tra cứu toàn diện đề án tuyển sinh, biến động điểm chuẩn 3 năm và tổ hợp chủ lực của từng trường.
@@ -50,7 +50,7 @@ export default async function SchoolsPage({
         <div>
           <dt className="sr-only">Số trường</dt>
           <dd className="text-2xl font-bold tabular-nums text-ink">
-            {SCHOOLS.length} <span className="text-sm font-medium text-muted">/ Trường Đại học</span>
+            {SCHOOLS.length} <span className="text-sm font-medium text-muted">/ Trường</span>
           </dd>
         </div>
         <div>

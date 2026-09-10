@@ -25,7 +25,7 @@ export type Major = {
   tuition: string;
 };
 
-export type Review = { author: string; role: string; content: string; school_code: string };
+export type Review = { author: string; role: string; content: string; school_code: string; rating?: number; criteria?: Record<string, number> };
 
 export const CURRENT_USER = { application_code: "HS-2025-HN9", score: 26.85, combo: "A00" };
 

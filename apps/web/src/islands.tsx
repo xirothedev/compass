@@ -51,8 +51,8 @@ const SCORE_RANGES = [
 ] as const;
 
 const SCHOOL_SORTS = [
-  { value: "cutoff-desc", label: "Điểm chuẩn TB (Cao → Thấp)" },
-  { value: "cutoff-asc", label: "Điểm chuẩn TB (Thấp → Cao)" },
+  { value: "cutoff-desc", label: "Điểm chuẩn 2024 (Cao → Thấp)" },
+  { value: "cutoff-asc", label: "Điểm chuẩn 2024 (Thấp → Cao)" },
   { value: "az", label: "Theo A-Z" },
 ] as const;
 
@@ -228,7 +228,7 @@ export function SchoolFilters({
 
 /* ---------- Suggestions: client-side sort over server-computed rows ---------- */
 const SORTS = [
-  { value: "recommended", label: "Thứ tự ưu tiên đề xuất (Bộ GD&ĐT)" },
+  { value: "recommended", label: "Thứ tự ưu tiên (An toàn → Vừa sức → Thử thách)" },
   { value: "cutoff-desc", label: "Điểm chuẩn 2024 giảm dần" },
   { value: "delta-desc", label: "Độ dư điểm giảm dần" },
 ] as const;
@@ -256,7 +256,8 @@ export function SuggestionList({
     return c;
   }, [sorted]);
   const groups: { tier: Bucket; rows: CutoffRow[]; offset: number }[] = useMemo(() => {
-    const order: Bucket[] = ["reach", "match", "safe"];
+    // ponytail: glossary order Safe/Match/Reach, not Reach-first
+    const order: Bucket[] = ["safe", "match", "reach"];
     let offset = 0;
     const out: { tier: Bucket; rows: CutoffRow[]; offset: number }[] = [];
     for (const tier of order) {
@@ -293,7 +294,7 @@ export function SuggestionList({
         </div>
         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lọc theo giỏ">
           <FilterChip label={`Tất cả 3 giỏ (${sorted.length})`} active={bucket === "all"} onToggle={() => setBucket("all")} />
-          {(["reach", "match", "safe"] as Bucket[]).map((t) => (
+          {(["safe", "match", "reach"] as Bucket[]).map((t) => (
             <FilterChip
               key={t}
               label={`${BUCKET_META[t].label} (${counts[t]})`}
@@ -331,7 +332,7 @@ export function SuggestionList({
 }
 
 /* ---------- Lookup: subject-sum form + rank via server action (Stitch lookup) ---------- */
-const COMBOS = ["A00", "A01", "B00", "D01", "C00", "K01"];
+const COMBOS = ["A00", "A01", "B00", "D01", "C00", "D07", "K01"];
 
 const COMBO_SUBJECTS: Record<string, [string, string, string]> = {
   A00: ["Toán học", "Vật lí", "Hóa học"],
@@ -339,13 +340,13 @@ const COMBO_SUBJECTS: Record<string, [string, string, string]> = {
   B00: ["Toán học", "Hóa học", "Sinh học"],
   C00: ["Ngữ văn", "Lịch sử", "Địa lí"],
   D01: ["Toán học", "Ngữ văn", "Tiếng Anh"],
+  D07: ["Toán học", "Hóa học", "Tiếng Anh"],
   K01: ["Toán học", "Ngữ văn", "Đánh giá tư duy"],
 };
 
 const EXAMS = [
-  "Kỳ thi tốt nghiệp THPT 2025 (Chính thức)",
-  "Kỳ thi thử THPTQG Đợt 2 (Toàn quốc)",
-  "Kỳ thi tốt nghiệp THPT 2024",
+  "THPTQG 2025 (Chính thức)",
+  "THPTQG 2024",
 ];
 
 function splitScore(score: number): [string, string, string] {
@@ -364,10 +365,13 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
   const [combo, setCombo] = useState(COMBOS.includes(defaultCombo) ? defaultCombo : "A00");
   const [subjects, setSubjects] = useState<[string, string, string]>(() => splitScore(defaultScore));
   const [priority, setPriority] = useState("0.00");
-  const total = useMemo(
-    () => Math.min(30, num(subjects[0]) + num(subjects[1]) + num(subjects[2]) + num(priority)),
-    [subjects, priority],
-  );
+  const total = useMemo(() => {
+    // ponytail: quy chế 2025 — từ 22.50, ưu tiên giảm dần [(30-T)/7.5]×P
+    const raw = num(subjects[0]) + num(subjects[1]) + num(subjects[2]);
+    const p = num(priority);
+    const scaled = raw >= 22.5 ? p * Math.max(0, (30 - raw) / 7.5) : p;
+    return Math.min(30, raw + scaled);
+  }, [subjects, priority]);
   const setSubject = (i: number, v: string) =>
     setSubjects((cur) => (i === 0 ? [v, cur[1], cur[2]] : i === 1 ? [cur[0], v, cur[2]] : [cur[0], cur[1], v]));
   const reset = () => {
@@ -402,8 +406,8 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
           </span>
           <div className="mt-2 grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="program-label">
             {[
-              ["GDPT 2018", "Sách giáo khoa mới"],
-              ["GDPT 2006", "Thí sinh tự do"],
+              ["CT2018", "Sách giáo khoa mới · GDPT 2018"],
+              ["CT2006", "Thí sinh tự do · GDPT 2006"],
             ].map(([v, s], i) => (
               <label key={v} className={`cursor-pointer rounded-xl border p-3 text-center ${i === 0 ? "border-accent bg-surface-2" : "border-line"}`}>
                 <input type="radio" name="program" value={v} defaultChecked={i === 0} className="sr-only" />
@@ -515,7 +519,7 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
 
       <div className="flex flex-col gap-4 lg:col-span-7">
         <p className="rounded-full border border-line bg-surface px-3 py-1.5 text-center text-xs text-muted">
-          Ước tính vị trí phân vị tổ hợp {combo} toàn quốc
+          Ước tính Thứ hạng tổ hợp {combo} toàn quốc
         </p>
         <div className="overflow-hidden rounded-2xl bg-[#0d2c54] p-6 text-white" aria-live="polite">
           <div className="flex flex-col gap-4">
@@ -556,7 +560,7 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
 
         <div className="rounded-2xl border border-line bg-surface p-5">
           <h3 className="text-base font-semibold text-ink">Biểu đồ phân bố Phổ điểm Tổ hợp {combo}</h3>
-          <p className="mt-1 text-[13px] text-muted">Mô hình đường cong chuẩn hóa · trục điểm 0 - 30 · ghim vị trí của bạn.</p>
+          <p className="mt-1 text-[13px] text-muted">Mô phỏng nội suy từ điểm mốc Phổ điểm · trục điểm 0 - 30 · ghim vị trí của bạn. Dữ liệu live theo CT2018/CT2006 khi có Supabase.</p>
           <svg viewBox="0 0 320 120" role="img" aria-label={`Vị trí ${total.toFixed(2)} điểm trên phổ`} className="mt-3 w-full">
             {[20, 45, 70, 95].map((y) => (
               <line key={y} x1="20" y1={y} x2="300" y2={y} stroke="var(--color-line)" strokeWidth="1" strokeDasharray="3 4" />
@@ -618,20 +622,22 @@ export function LookupForm({ defaultScore = 26.85, defaultCombo = "A00" }: { def
   );
 }
 
-/* ---------- Detail: major search + combo filter over CutoffTable ---------- */
-export function DetailMajorFilter({ rows, combos }: { rows: CutoffRow[]; combos: string[] }) {
+/* ---------- Detail: major search + combo + method filter over CutoffTable ---------- */
+export function DetailMajorFilter({ rows, combos, methods = [] }: { rows: CutoffRow[]; combos: string[]; methods?: string[] }) {
   const [query, setQuery] = useState("");
   const [combo, setCombo] = useState("");
+  const [method, setMethod] = useState("");
   const deferredQuery = useDeferredValue(query);
   const filtered = useMemo(() => {
     const q = deferredQuery.trim().toLowerCase();
     return rows.filter(
       (r) =>
         (!q || r.code.toLowerCase().includes(q) || r.name.toLowerCase().includes(q)) &&
-        (!combo || r.combos.split(",").map((c) => c.trim()).includes(combo)),
+        (!combo || r.combos.split(",").map((c) => c.trim()).includes(combo)) &&
+        (!method || r.method === method),
     );
-  }, [rows, deferredQuery, combo]);
-  const hasFilter = query !== "" || combo !== "";
+  }, [rows, deferredQuery, combo, method]);
+  const hasFilter = query !== "" || combo !== "" || method !== "";
   return (
     <div>
       <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-3 md:flex-row">
@@ -640,16 +646,25 @@ export function DetailMajorFilter({ rows, combos }: { rows: CutoffRow[]; combos:
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo mã ngành (IT1, EE2...) hoặc tên chuyên ngành..."
+            placeholder="Tìm theo mã Ngành (IT1, EE2...) hoặc tên Ngành..."
             className="h-11 w-full rounded-lg border border-line bg-surface px-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
         </label>
-        <label className="md:w-48">
+        <label className="md:w-40">
           <span className="sr-only">Tổ hợp</span>
           <select value={combo} onChange={(e) => setCombo(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
             <option value="">Tất cả tổ hợp</option>
             {combos.map((c) => (
               <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+        </label>
+        <label className="md:w-44">
+          <span className="sr-only">Phương thức xét tuyển</span>
+          <select value={method} onChange={(e) => setMethod(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
+            <option value="">Mọi phương thức</option>
+            {(methods.length ? methods : [...new Set(rows.map((r) => r.method))]).map((m) => (
+              <option key={m} value={m}>{m}</option>
             ))}
           </select>
         </label>
@@ -659,6 +674,7 @@ export function DetailMajorFilter({ rows, combos }: { rows: CutoffRow[]; combos:
             onClick={() => {
               setQuery("");
               setCombo("");
+              setMethod("");
             }}
             className="h-11 shrink-0 rounded-lg border border-line px-4 text-sm font-semibold text-ink hover:bg-surface-2"
           >
@@ -667,7 +683,7 @@ export function DetailMajorFilter({ rows, combos }: { rows: CutoffRow[]; combos:
         ) : null}
       </div>
       <p className="mt-3 text-sm text-muted" aria-live="polite">
-        Hiển thị <strong className="tabular-nums text-ink">{filtered.length}</strong> / {rows.length} chương trình đào tạo
+        Hiển thị <strong className="tabular-nums text-ink">{filtered.length}</strong> / {rows.length} Ngành đào tạo
       </p>
       <div className="mt-3">
         {filtered.length > 0 ? (
@@ -682,37 +698,39 @@ export function DetailMajorFilter({ rows, combos }: { rows: CutoffRow[]; combos:
   );
 }
 
-/* ---------- Onboarding: 5-step wizard (ends with Xác nhận hồ sơ) ---------- */
-const STEPS = ["Điểm số & Tổ hợp", "Nhóm ngành yêu thích", "Khu vực & Ngân sách", "Chiến lược", "Xác nhận hồ sơ"] as const;
-const COMBO_OPTIONS = ["A00", "A01", "B00", "D01", "C00", "K01"];
+/* ---------- Onboarding: 4-step wizard + Xác nhận (glossary guidance) ---------- */
+const STEPS = ["Điểm số & Tổ hợp", "Nhóm ngành yêu thích", "Khu vực & Ngân sách", "Chiến lược"] as const;
+const COMBO_OPTIONS = ["A00", "A01", "B00", "D01", "C00", "D07", "K01"];
 const GROUP_OPTIONS = ["Kỹ thuật - Công nghệ", "Kinh tế - Quản trị", "Sức khỏe", "Xã hội - Nhân văn", "Ngoại ngữ"];
-const REGION_OPTIONS = ["Hà Nội", "TP.HCM", "Học phí dưới 25 triệu/năm"];
+const REGION_OPTIONS = ["Hà Nội", "TP.HCM", "Tỉnh khác"];
+const BUDGET_OPTIONS = ["Không giới hạn", "Dưới 25 triệu/năm", "25-32 triệu/năm", "Trên 32 triệu/năm"];
 const STRATEGIES = [
-  { value: "balanced", title: "Chiến lược Cân bằng", desc: "Phân bố an toàn và mở rộng cơ hội ở các nhóm trường." },
-  { value: "careful", title: "Chiến lược Thận trọng", desc: "Tối đa hóa xác suất đỗ đại học công lập." },
-  { value: "bold", title: "Chiến lược Đột phá", desc: "Đặt mục tiêu cao vào nhóm trường top đầu." },
+  { value: "balanced", title: "Chiến lược Cân bằng", desc: "Phân bố An toàn / Vừa sức / Thử thách đều nhau." },
+  { value: "careful", title: "Chiến lược Thận trọng", desc: "Ưu tiên An toàn, tối đa xác suất trúng tuyển Trường công lập." },
+  { value: "bold", title: "Chiến lược Đột phá", desc: "Ưu tiên Thử thách, nhắm nhóm Trường top đầu." },
 ] as const;
 
 export function OnboardingWizard() {
   const [step, setStep] = useState(0);
   const { profile, setProfile } = useProfile();
-  const { score, combo, group, region, strategy } = profile;
+  const { score, combo, group, region, budget, strategy } = profile;
   const [saved, setSaved] = useState(false);
-  const progress = useMemo(() => ((step + 1) / STEPS.length) * 100, [step]);
+  const progress = useMemo(() => ((Math.min(step, 3) + 1) / STEPS.length) * 100, [step]);
   const matchCount = useMemo(
     () => MAJORS.filter((n) => n.combos.includes(combo)).length,
     [combo],
   );
   const strategyTitle = STRATEGIES.find((s) => s.value === strategy)?.title ?? strategy;
+  const suggestHref = `/suggestions?score=${encodeURIComponent(score)}&combo=${encodeURIComponent(combo)}&group=${encodeURIComponent(group)}&region=${encodeURIComponent(region)}&budget=${encodeURIComponent(budget)}&strategy=${encodeURIComponent(strategy)}`;
   return (
     <div className="mx-auto w-full max-w-5xl">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-ink">
-          Tiến trình khảo sát [Bước {step + 1}/{STEPS.length}]
+          Tiến trình Onboarding [Bước {Math.min(step + 1, 4)}/4{step >= 4 ? " · Xác nhận" : ""}]
         </p>
         <p className="text-sm tabular-nums text-muted">Hoàn thành {Math.round(progress)}%</p>
       </div>
-      <ol className="mt-3 flex gap-2" aria-label="Các bước khảo sát">
+      <ol className="mt-3 flex gap-2" aria-label="Các bước Onboarding">
         {STEPS.map((s, i) => (
           <li key={s} className="flex-1">
             <span className={`block h-2 rounded-full ${i <= step ? "bg-accent" : "bg-line"}`} />
@@ -724,19 +742,40 @@ export function OnboardingWizard() {
         <div className="rounded-2xl border border-line bg-surface p-6 md:p-8 lg:col-span-8" aria-live="polite">
         {step < 3 ? (
           <div>
-            <h2 className="text-xl font-semibold text-ink">Bước {step + 1}: {STEPS[step]}</h2>
+            <h2 className="text-xl font-semibold text-ink">Bước {step + 1}: {STEPS[step as 0 | 1 | 2]}</h2>
             <p className="mt-2 text-sm text-body">
               {step === 0 && "Nhập điểm dự kiến và chọn tổ hợp xét tuyển của bạn (ví dụ A00: Toán, Lý, Hóa)."}
               {step === 1 && "Chọn nhóm ngành bạn yêu thích nhất."}
-              {step === 2 && "Chọn khu vực và mức học phí phù hợp với gia đình."}
+              {step === 2 && "Chọn khu vực và mức học phí phù hợp với gia đình — hai lựa chọn độc lập."}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {(step === 0 ? COMBO_OPTIONS : step === 1 ? GROUP_OPTIONS : REGION_OPTIONS).map((o) => {
-                const key = step === 0 ? "combo" : step === 1 ? "group" : "region";
-                const active = profile[key] === o;
-                return <FilterChip key={o} label={o} active={active} onToggle={() => setProfile({ [key]: o })} />;
-              })}
-            </div>
+            {step === 2 ? (
+              <div className="mt-4 flex flex-col gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Khu vực</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {REGION_OPTIONS.map((o) => (
+                      <FilterChip key={o} label={o} active={region === o} onToggle={() => setProfile({ region: o })} />
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-ink">Ngân sách học phí</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {BUDGET_OPTIONS.map((o) => (
+                      <FilterChip key={o} label={o} active={budget === o} onToggle={() => setProfile({ budget: o })} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {(step === 0 ? COMBO_OPTIONS : GROUP_OPTIONS).map((o) => {
+                  const key = step === 0 ? "combo" : "group";
+                  const active = profile[key] === o;
+                  return <FilterChip key={o} label={o} active={active} onToggle={() => setProfile({ [key]: o })} />;
+                })}
+              </div>
+            )}
             {step === 0 ? (
               <label className="mt-4 block max-w-xs">
                 <span className="text-sm font-semibold text-ink">Điểm dự kiến (thang 30)</span>
@@ -754,7 +793,7 @@ export function OnboardingWizard() {
           </div>
         ) : step === 3 ? (
           <fieldset>
-            <legend className="text-xl font-semibold text-ink">Bước 4: Chọn chiến lược nguyện vọng</legend>
+            <legend className="text-xl font-semibold text-ink">Bước 4: Chọn chiến lược Nguyện vọng</legend>
             <div className="mt-4 flex flex-col gap-3">
               {STRATEGIES.map((s) => (
                 <label key={s.value} className={`cursor-pointer rounded-xl border p-4 ${strategy === s.value ? "border-accent bg-surface-2" : "border-line"}`}>
@@ -769,9 +808,9 @@ export function OnboardingWizard() {
           </fieldset>
         ) : (
           <div>
-            <h2 className="text-xl font-semibold text-ink">Bước 5: Xác nhận hồ sơ xét tuyển</h2>
+            <h2 className="text-xl font-semibold text-ink">Xác nhận hồ sơ xét tuyển</h2>
             <p className="mt-2 text-sm text-body">
-              Kiểm tra lại thông số trước khi xem gợi ý nguyện vọng.
+              Kiểm tra lại thông số trước khi xem Gợi ý Nguyện vọng.
             </p>
             <dl className="mt-4 flex flex-col gap-2">
               {[
@@ -779,6 +818,7 @@ export function OnboardingWizard() {
                 { label: "Tổ hợp môn", chip: combo, edit: 0 },
                 { label: "Nhóm ngành", chip: group, edit: 1 },
                 { label: "Khu vực", chip: region, edit: 2 },
+                { label: "Ngân sách", chip: budget, edit: 2 },
                 {
                   label: "Chiến lược",
                   chip: STRATEGIES.find((s) => s.value === strategy)?.title ?? strategy,
@@ -815,16 +855,16 @@ export function OnboardingWizard() {
           <button type="button" onClick={() => setSaved(true)} className="h-11 rounded-lg border border-line px-5 text-sm font-semibold text-ink hover:bg-surface-2">
             {saved ? "Đã lưu tạm ✓" : "Lưu tạm"}
           </button>
-          {step < STEPS.length - 1 ? (
+          {step < 4 ? (
             <button type="button" onClick={() => setStep(step + 1)} className="ml-auto h-11 rounded-lg bg-cta px-5 text-sm font-semibold text-on-cta hover:bg-cta-hover">
-              Tiếp tục →
+              {step === 3 ? "Xác nhận →" : "Tiếp tục →"}
             </button>
           ) : (
             <Link
-              href={`/suggestions?score=${encodeURIComponent(score)}&combo=${encodeURIComponent(combo)}`}
+              href={suggestHref}
               className="ml-auto inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-cta hover:bg-accent-hover"
             >
-              Xem gợi ý nguyện vọng
+              Xem Gợi ý Nguyện vọng
             </Link>
           )}
         </div>
@@ -848,6 +888,10 @@ export function OnboardingWizard() {
             <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
               <dt className="text-muted">Khu vực</dt>
               <dd className="text-right font-semibold text-ink">{region}</dd>
+            </div>
+            <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
+              <dt className="text-muted">Ngân sách</dt>
+              <dd className="text-right font-semibold text-ink">{budget}</dd>
             </div>
             <div className="flex justify-between gap-2 rounded-lg bg-surface-2 px-3 py-2">
               <dt className="text-muted">Chiến lược</dt>
@@ -953,15 +997,24 @@ export function FollowingList({ schools }: { schools: (SchoolCardData & { region
   if (followed.length === 0) {
     return (
       <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
-        Bạn chưa theo dõi trường nào. Mở trang trường và bấm “Thêm vào danh sách theo dõi”.
+        Bạn chưa theo dõi Trường nào. Mở trang Trường và bấm “Thêm vào danh sách theo dõi”.
       </p>
     );
   }
+  const suggestHref = `/suggestions?score=${encodeURIComponent(profile.score)}&combo=${encodeURIComponent(profile.combo)}&group=${encodeURIComponent(profile.group)}&region=${encodeURIComponent(profile.region)}&budget=${encodeURIComponent(profile.budget)}&strategy=${encodeURIComponent(profile.strategy)}`;
   return (
     <div>
-      <p className="text-sm text-muted" aria-live="polite">
-        {followed.length} trường đang theo dõi
-      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm text-muted" aria-live="polite">
+          {followed.length} Trường đang theo dõi · Thứ tự ưu tiên chỉnh trong Gợi ý Nguyện vọng
+        </p>
+        <a
+          href={suggestHref}
+          className="ml-auto inline-flex h-11 items-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-accent hover:bg-accent-hover"
+        >
+          Tạo Gợi ý Nguyện vọng →
+        </a>
+      </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {followed.map((s) => (
           <div key={s.code} className="relative">

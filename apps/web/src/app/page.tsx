@@ -12,7 +12,7 @@ const FOCUS = [
     no: "Tính năng trọng tâm 01",
     href: "/lookup",
     title: "Tra cứu Thứ hạng & Phổ điểm",
-    body: "Dự đoán vị trí xếp hạng tổ hợp môn của bạn (A00, A01, B00, C00, D01) trên phổ điểm toàn quốc.",
+    body: "Tra cứu Thứ hạng tổ hợp môn của bạn (A00, A01, B00, C00, D01, D07) trên Phổ điểm toàn quốc.",
     mini: "Báo cáo phân vị & độ lệch chuẩn chi tiết",
     link: "Tra cứu phổ điểm ngay",
   },
@@ -28,8 +28,8 @@ const FOCUS = [
     no: "Tính năng trọng tâm 03",
     href: "/suggestions",
     title: "Gợi ý Nguyện vọng Thông minh",
-    body: "Thuật toán ma trận xác suất phân bổ danh sách nguyện vọng theo chiến lược Safe / Match / Reach.",
-    mini: "Chiến lược Safe / Match / Reach tối ưu",
+    body: "Quy tắc đối sánh Điểm chuẩn phân bổ danh sách Nguyện vọng theo chiến lược An toàn / Vừa sức / Thử thách.",
+    mini: "Chiến lược An toàn / Vừa sức / Thử thách tối ưu",
     link: "Khởi tạo danh sách nguyện vọng",
   },
 ];
@@ -114,7 +114,7 @@ export default function Home() {
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--surface-container-low)] px-6 py-3.5 text-sm font-medium text-ink transition-all hover:bg-[var(--surface-container)] sm:w-auto"
               >
                 <span aria-hidden className="text-[var(--accent)]">◉</span>
-                <span>Làm bài Onboarding khảo sát</span>
+                <span>Bắt đầu Onboarding</span>
               </Link>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-6 text-xs font-medium text-body">
@@ -294,7 +294,7 @@ export default function Home() {
                   Bắt đầu định hướng nguyện vọng của bạn ngay hôm nay
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-[22px] text-[#adc7f8]">
-                  Chỉ mất 2 phút để nhập điểm dự kiến hoặc làm bài khảo sát định hướng.
+                  Chỉ mất 2 phút để nhập điểm dự kiến hoặc hoàn thiện Onboarding định hướng.
                 </p>
               </div>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -308,7 +308,7 @@ export default function Home() {
                   href="/onboarding"
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0d2c54] px-6 py-3.5 text-sm font-medium text-white transition-all hover:bg-[#164075]"
                 >
-                  Bắt đầu khảo sát <span aria-hidden>→</span>
+                  Bắt đầu Onboarding <span aria-hidden>→</span>
                 </Link>
               </div>
             </div>

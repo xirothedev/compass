@@ -12,8 +12,11 @@ export async function calcRank(
   const score = Number(formData.get("score"));
   const combo = String(formData.get("combo") ?? "A00").toUpperCase();
   if (!Number.isFinite(score) || score < 0 || score > 30) return null;
+  const exam = String(formData.get("exam") ?? "THPTQG 2025 (Chính thức)");
+  const program = String(formData.get("program") ?? "CT2018");
+  const year = /2024/.test(exam) ? 2024 : 2025;
   // ponytail: live distribution when Supabase is configured, mock anchors otherwise
-  const live = await rankFromDistribution(score, combo).catch(() => null);
+  const live = await rankFromDistribution(score, combo, { exam, year, curriculum: program }).catch(() => null);
   if (live) return { score, combo, ...live };
   const rank = interpRank(score);
   return { score, combo, rank, percentile: rankPercentile(rank) };
