@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
 import { calcRank, saveOrder } from "./actions";
-import { NGANHS } from "./mocks";
+import { MAJORS } from "./mocks";
 import { useProfile } from "./profile";
 
 /* ---------- Theme toggle (header) ---------- */
@@ -700,7 +700,7 @@ export function OnboardingWizard() {
   const [saved, setSaved] = useState(false);
   const progress = useMemo(() => ((step + 1) / STEPS.length) * 100, [step]);
   const matchCount = useMemo(
-    () => NGANHS.filter((n) => n.toHop.includes(combo)).length,
+    () => MAJORS.filter((n) => n.combos.includes(combo)).length,
     [combo],
   );
   const strategyTitle = STRATEGIES.find((s) => s.value === strategy)?.title ?? strategy;

@@ -1,4 +1,4 @@
-ma_truong,slug_en,ten,tinh,mien,loai,website,source_url
+code,slug,name,province,region,kind,website,source_url
 KMA,hoc-vien-ky-thuat-mat-ma,Học Viện Kỹ Thuật Mật Mã,TP HCM,Bac,DaiHoc,,https://huongnghiep.hocmai.vn/diem-truong/hoc-vien-ky-thuat-mat-ma/
 PKH,hoc-vien-phong-khong-khong-quan,Học Viện Phòng Không – Không Quân,Hà Nội,Bac,DaiHoc,,https://huongnghiep.hocmai.vn/diem-truong/hoc-vien-phong-khong-khong-quan/
 KGH,truong-si-quan-khong-quan-he-ai-hoc,Trường Sĩ Quan Không Quân - Hệ Đại học,Khánh Hòa,Trung,DaiHoc,,https://huongnghiep.hocmai.vn/diem-truong/truong-si-quan-khong-quan-he-dai-hoc/

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BUCKET_META, PortfolioBar } from "@compass/ui";
 import { classifyBucket, interpRank, rankPercentile } from "@compass/ui";
-import { CURRENT_USER, NGANHS, TRUONGS } from "../../mocks";
+import { CURRENT_USER, MAJORS, SCHOOLS } from "../../mocks";
 import { SuggestionList } from "../../islands";
 
 export async function generateMetadata({
@@ -10,9 +10,9 @@ export async function generateMetadata({
   searchParams?: Promise<{ school?: string }>;
 }) {
   const ma = (await searchParams)?.school ?? "";
-  const school = TRUONGS.find((t) => t.ma.toLowerCase() === ma.toLowerCase());
+  const school = SCHOOLS.find((t) => t.code.toLowerCase() === ma.toLowerCase());
   return {
-    title: school ? `Gợi ý Nguyện vọng tại ${school.ten} - Compass` : "Gợi ý Nguyện vọng Thông minh - Compass",
+    title: school ? `Gợi ý Nguyện vọng tại ${school.name} - Compass` : "Gợi ý Nguyện vọng Thông minh - Compass",
   };
 }
 
@@ -23,25 +23,25 @@ export default async function SuggestionsPage({
 }) {
   const params = (await searchParams) ?? {};
   const parsed = Number(params.score);
-  const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.diem;
-  const combo = (params.combo ?? CURRENT_USER.toHop).toUpperCase();
-  const schoolFilter = TRUONGS.find(
-    (t) => t.ma.toLowerCase() === (params.school ?? "").toLowerCase(),
+  const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.score;
+  const combo = (params.combo ?? CURRENT_USER.combo).toUpperCase();
+  const schoolFilter = SCHOOLS.find(
+    (t) => t.code.toLowerCase() === (params.school ?? "").toLowerCase(),
   );
   const top = rankPercentile(interpRank(score));
-  const scored = NGANHS.filter(
-    (n) => n.toHop.includes(combo) && (!schoolFilter || n.truong === schoolFilter.ma),
+  const scored = MAJORS.filter(
+    (n) => n.combos.includes(combo) && (!schoolFilter || n.school_code === schoolFilter.code),
   ).map((n) => {
-    const delta = score - n.diemChuan.y2024;
-    const school = TRUONGS.find((t) => t.ma === n.truong);
+    const delta = score - n.cutoffs.y2024;
+    const school = SCHOOLS.find((t) => t.code === n.school_code);
     return {
-      code: n.maNganh,
-      name: `${n.ten} - ${school?.ten ?? n.truong}`,
-      combos: n.toHop.join(", "),
-      method: n.phuongThuc[0],
-      y2022: n.diemChuan.y2022,
-      y2023: n.diemChuan.y2023,
-      y2024: n.diemChuan.y2024,
+      code: n.code,
+      name: `${n.name} - ${school?.name ?? n.school_code}`,
+      combos: n.combos.join(", "),
+      method: n.methods[0],
+      y2022: n.cutoffs.y2022,
+      y2023: n.cutoffs.y2023,
+      y2024: n.cutoffs.y2024,
       tier: classifyBucket(delta),
       delta,
     };
@@ -68,7 +68,7 @@ export default async function SuggestionsPage({
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <p className="text-sm font-semibold text-ink">Hồ sơ Thí sinh</p>
-            <p className="text-[13px] tabular-nums text-muted">Mã số: {CURRENT_USER.maSo}</p>
+            <p className="text-[13px] tabular-nums text-muted">Mã số: {CURRENT_USER.application_code}</p>
           </div>
           <dl className="flex flex-wrap gap-2 sm:ml-auto">
             {[
@@ -105,7 +105,7 @@ export default async function SuggestionsPage({
       {schoolFilter ? (
         <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-[var(--surface-container-low)] p-4">
           <p className="text-sm text-body">
-            Đang xem gợi ý tại <strong className="font-semibold text-ink">{schoolFilter.ten}</strong> ·{" "}
+            Đang xem gợi ý tại <strong className="font-semibold text-ink">{schoolFilter.name}</strong> ·{" "}
             {scored.length} nguyện vọng hợp tổ hợp {combo}
           </p>
           <Link
@@ -158,7 +158,7 @@ export default async function SuggestionsPage({
             <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
               {schoolFilter ? (
                 <>
-                  {schoolFilter.ten} chưa có ngành nào xét tổ hợp {combo} trong dữ liệu mẫu.{" "}
+                  {schoolFilter.name} chưa có ngành nào xét tổ hợp {combo} trong dữ liệu mẫu.{" "}
                   <Link
                     href={`/suggestions?score=${score.toFixed(2)}&combo=${encodeURIComponent(combo)}`}
                     className="font-semibold text-[var(--accent)] hover:underline"

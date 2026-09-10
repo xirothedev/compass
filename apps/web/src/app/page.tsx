@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TierBadge, interpRank, rankPercentile } from "@compass/ui";
-import { NGANHS, TRUONGS } from "../mocks";
+import { MAJORS, SCHOOLS } from "../mocks";
 
 // ponytail: section order + copy mirror Stitch home.html; every number is computed
 // from mocks (Stitch's 14.280/340k, 250+, Top 11.6% are invented placeholders).
@@ -73,7 +73,7 @@ const BUCKETS = [
 export default function Home() {
   const rank = interpRank(HERO_SCORE);
   const top = rankPercentile(rank);
-  const majorCount = NGANHS.length;
+  const majorCount = MAJORS.length;
   const heroRows = [
     { name: "ĐH Bách khoa Hà Nội · Kỹ thuật Cơ điện tử (ME1)", tier: "match" as const, cutoff: "26.60" },
     { name: "ĐH Bách khoa Hà Nội · Khoa học Máy tính (IT1)", tier: "reach" as const, cutoff: "28.50" },
@@ -198,7 +198,7 @@ export default function Home() {
         <dl className="mx-auto grid w-full max-w-7xl grid-cols-2 gap-6 px-4 py-10 md:px-8 lg:grid-cols-4 lg:gap-8 lg:px-12">
           {[
             ["900.000+", "Thí sinh cả nước", "Phổ điểm mock bao phủ toàn dải điểm thang 30."],
-            [`${TRUONGS.length}`, "Trường Đại học & Viện", "Đề án tuyển sinh chuẩn hóa 3 miền."],
+            [`${SCHOOLS.length}`, "Trường Đại học & Viện", "Đề án tuyển sinh chuẩn hóa 3 miền."],
             [`${majorCount}+`, "Ngành đào tạo chuẩn", "Mã ngành, tổ hợp xét tuyển và chỉ tiêu."],
             ["100%", "Bảo mật tuyệt đối", "Không cần số báo danh, không lưu danh tính."],
           ].map(([v, l, s]) => (

@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { TRUONGS, NGANHS, toCard } from "../../mocks";
+import { SCHOOLS, MAJORS, toCard } from "../../mocks";
 import { FollowingList } from "../../islands";
 
 export const metadata = { title: "Danh sách theo dõi - Compass" };
 
 export default function FollowingPage() {
-  const cards = TRUONGS.map(toCard);
-  const majors = NGANHS.length;
+  const cards = SCHOOLS.map(toCard);
+  const majors = MAJORS.length;
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Breadcrumb" className="text-[13px] text-muted">

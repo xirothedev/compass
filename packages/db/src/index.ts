@@ -1,33 +1,33 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-// Row types mirror supabase/migrations/0001_init.sql (public-read tables only).
+// Row types mirror supabase/migrations (public-read tables only).
 export type SchoolRow = {
-  ma_truong: string;
-  slug_en: string;
-  ten: string;
-  tinh: string;
-  mien: string;
-  loai: string;
+  code: string;
+  slug: string;
+  name: string;
+  province: string;
+  region: string;
+  kind: string;
   website: string | null;
   source_url: string | null;
 };
 
 export type CutoffRow = {
-  ma_truong: string;
-  ma_nganh: string;
-  ten_nganh: string;
-  to_hop: string | null;
-  nam: number;
-  phuong_thuc: string;
-  diem: number;
-  hoc_phi_nam?: number | null;
-  chi_tieu?: number | null;
+  school_code: string;
+  major_code: string;
+  major_name: string;
+  combo: string | null;
+  year: number;
+  method: string;
+  score: number;
+  tuition_per_year?: number | null;
+  quota?: number | null;
 };
 
-export type DistRow = { to_hop: string; diem: number; cnt: number };
+export type DistRow = { combo: string; score: number; count: number };
 
 export type ReviewRow = {
-  ma_truong: string;
+  school_code: string;
   criteria: Record<string, number>;
   comment: string | null;
 };

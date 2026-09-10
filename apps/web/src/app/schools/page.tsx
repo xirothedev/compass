@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TRUONGS, NGANHS } from "../../mocks";
+import { SCHOOLS, MAJORS } from "../../mocks";
 import { SchoolFilters } from "../../islands";
 
 export const metadata = { title: "Danh mục Trường & Điểm chuẩn - Compass" };
@@ -10,21 +10,21 @@ export default async function SchoolsPage({
   searchParams?: Promise<{ q?: string }>;
 }) {
   const q = (await searchParams)?.q ?? "";
-  const schools = TRUONGS.map((t) => ({
-    code: t.ma,
-    name: t.ten,
-    combos: t.toHopChuLuc,
-    cutoff2024: t.diemChuan2024,
-    trend: t.xuHuong,
-    tuition: t.hocPhi,
-    kind: t.loaiHinh,
-    region: t.khuVuc,
-    groups: t.nhomNganh,
-    majors: NGANHS.filter((n) => n.truong === t.ma).length,
+  const schools = SCHOOLS.map((t) => ({
+    code: t.code,
+    name: t.name,
+    combos: t.main_combos,
+    cutoff2024: t.cutoff2024,
+    trend: t.trend,
+    tuition: t.tuition,
+    kind: t.kind,
+    region: t.region,
+    groups: t.groups,
+    majors: MAJORS.filter((n) => n.school_code === t.code).length,
   }));
-  const regions = [...new Set(TRUONGS.map((t) => t.khuVuc))];
-  const groups = [...new Set(TRUONGS.flatMap((t) => t.nhomNganh))];
-  const kinds = [...new Set(TRUONGS.map((t) => t.loaiHinh))];
+  const regions = [...new Set(SCHOOLS.map((t) => t.region))];
+  const groups = [...new Set(SCHOOLS.flatMap((t) => t.groups))];
+  const kinds = [...new Set(SCHOOLS.map((t) => t.kind))];
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
@@ -50,13 +50,13 @@ export default async function SchoolsPage({
         <div>
           <dt className="sr-only">Số trường</dt>
           <dd className="text-2xl font-bold tabular-nums text-ink">
-            {TRUONGS.length} <span className="text-sm font-medium text-muted">/ Trường Đại học</span>
+            {SCHOOLS.length} <span className="text-sm font-medium text-muted">/ Trường Đại học</span>
           </dd>
         </div>
         <div>
           <dt className="sr-only">Số mã ngành</dt>
           <dd className="text-2xl font-bold tabular-nums text-ink">
-            {NGANHS.length} <span className="text-sm font-medium text-muted">/ Mã ngành tuyển sinh</span>
+            {MAJORS.length} <span className="text-sm font-medium text-muted">/ Mã ngành tuyển sinh</span>
           </dd>
         </div>
       </dl>

@@ -14,7 +14,7 @@ UA = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     "Accept": "application/json, text/plain, */*",
     "Accept-Language": "vi,en;q=0.9",
-    "Referer": "https://diemthi.tuyensinh247.com/diem-chuan.html",
+    "Referer": "https://diemthi.tuyensinh247.com/score-chuan.html",
 }
 BASE = "https://diemthi.tuyensinh247.com"
 API_SEARCH = BASE + "/api/school/search"
@@ -25,7 +25,7 @@ def get_json(url: str, timeout=30):
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode("utf-8", "replace"))
 
-def map_phuong_thuc(admission_name: str, mark_type) -> str:
+def map_method(admission_name: str, mark_type) -> str:
     n = (admission_name or "").lower()
     try: mt = int(mark_type)
     except (TypeError, ValueError): mt = 0
@@ -49,7 +49,7 @@ def main():
     ap.add_argument("--delay", type=float, default=1.0)
     ap.add_argument("--limit", type=int, default=0, help="Limit number of schools (0 = all)")
     ap.add_argument("--codes", default="",
-                    help="CSV with a ma_truong column: only crawl these codes (skip codes missing from the API list)")
+                    help="CSV with a school_code column: only crawl these codes (skip codes missing from the API list)")
     args = ap.parse_args()
     raw, out = Path(args.rawdir), Path(args.outdir)
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -67,7 +67,7 @@ def main():
     if args.codes:
         import csv as _csv
         with open(args.codes, encoding="utf-8-sig") as f:
-            want = {r["ma_truong"].strip() for r in _csv.DictReader(f) if r.get("ma_truong")}
+            want = {r["school_code"].strip() for r in _csv.DictReader(f) if r.get("school_code")}
         before = len(items)
         items = [s for s in items if s["code"] in want]
         missing = want - {s["code"] for s in items}
@@ -92,29 +92,29 @@ def main():
                 time.sleep(args.delay)
             data = (payload.get("response") or payload).get("data") or []
             if not data: empty.append(code)
-            url = f"{BASE}/diem-chuan/{s.get('alias')}-{code}.html"
+            url = f"{BASE}/score-chuan/{s.get('alias')}-{code}.html"
             for sc in data:
-                try: diem = float(str(sc.get("mark", "")).replace(",", "."))
+                try: score = float(str(sc.get("mark", "")).replace(",", "."))
                 except (ValueError, TypeError): continue
                 adm = (sc.get("admission_name") or "").strip()
                 intro = (sc.get("introtext") or "").strip()
                 note = f"{adm} | {intro}" if intro else adm
                 rows.append({
-                    "ma_truong": code, "ten_truong": s.get("name") or "",
-                    "tinh": "",
-                    "ma_nganh": (sc.get("display_code") or sc.get("code") or "").strip(),
-                    "ten_nganh": (sc.get("name") or "").strip(),
-                    "to_hop": (sc.get("block") or "").strip().upper(),
-                    "diem": diem,
-                    "phuong_thuc": map_phuong_thuc(adm, sc.get("mark_type")),
-                    "nam": year, "ghi_chu": note[:200],
+                    "school_code": code, "school_name": s.get("name") or "",
+                    "province": "",
+                    "major_code": (sc.get("display_code") or sc.get("code") or "").strip(),
+                    "major_name": (sc.get("name") or "").strip(),
+                    "combo": (sc.get("block") or "").strip().upper(),
+                    "score": score,
+                    "method": map_method(adm, sc.get("mark_type")),
+                    "year": year, "note": note[:200],
                     "source_url": url, "crawled_at": now,
                 })
             if (i+1) % 20 == 0: print(f"  ...{i+1}/{len(items)}")
         out.mkdir(parents=True, exist_ok=True)
         with open(out / f"cutoffs_ts247_{year}.csv", "w", newline="", encoding="utf-8") as f:
-            w = csv.DictWriter(f, fieldnames=["ma_truong","ten_truong","tinh","ma_nganh",
-                "ten_nganh","to_hop","diem","phuong_thuc","nam","ghi_chu","source_url","crawled_at"])
+            w = csv.DictWriter(f, fieldnames=["school_code","school_name","province","major_code",
+                "major_name","combo","score","method","year","note","source_url","crawled_at"])
             w.writeheader(); w.writerows(rows)
         print(f"[{year}] -> {out}/cutoffs_ts247_{year}.csv ({len(rows)} rows, {len(empty)} codes with no data)")
 

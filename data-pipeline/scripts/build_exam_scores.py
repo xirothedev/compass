@@ -3,45 +3,45 @@ Sources (transient, deleted after build to keep data/ flat):
   /tmp/bulkfull/du_lieu_diem_thi_{2017-2022,2026}.csv (sdgedfegw, SBD/Tinh/Khoi* precomputed)
   /tmp/bulkfull/diem_thi_thpt_{2023,2024}.csv (anhdung98)
   /tmp/bulkfull/20250715-ketquathi-ct{2018a,2006}.xlsx (anhdung98, 2025)
-Canonical columns: sbd,tinh,nam,chuong_trinh + subjects + combos th_a00..th_d07.
+Canonical columns: reg_no,province_code,year,curriculum + subjects + combos total_a00..total_d07.
 Legal: SBD+scores only, no names (see docs/adr/0004-no-pii.md). No public bulk download from the app.
 """
 import argparse
 import pandas as pd
 
-SUBJECTS = ["toan", "ngu_van", "ngoai_ngu", "vat_li", "hoa_hoc", "sinh_hoc",
-            "lich_su", "dia_li", "gdcd", "ktpl", "tin_hoc", "cong_nghe_cn",
-            "cong_nghe_nn"]
+SUBJECTS = ["math", "literature", "foreign_lang", "physics", "chemistry", "biology",
+            "history", "geography", "civic_education", "econ_law", "informatics", "tech_industry",
+            "tech_agri"]
 COMBOS = {
-    "th_a00": ["toan", "vat_li", "hoa_hoc"], "th_a01": ["toan", "vat_li", "ngoai_ngu"],
-    "th_a02": ["toan", "vat_li", "sinh_hoc"], "th_b00": ["toan", "hoa_hoc", "sinh_hoc"],
-    "th_c00": ["ngu_van", "lich_su", "dia_li"], "th_c01": ["ngu_van", "toan", "vat_li"],
-    "th_d01": ["ngu_van", "toan", "ngoai_ngu"], "th_d07": ["toan", "hoa_hoc", "ngoai_ngu"],
-    "th_a0t": ["toan", "vat_li", "tin_hoc"], "th_k01": ["toan", "ngu_van", "tin_hoc"],
+    "total_a00": ["math", "physics", "chemistry"], "total_a01": ["math", "physics", "foreign_lang"],
+    "total_a02": ["math", "physics", "biology"], "total_b00": ["math", "chemistry", "biology"],
+    "total_c00": ["literature", "history", "geography"], "total_c01": ["literature", "math", "physics"],
+    "total_d01": ["literature", "math", "foreign_lang"], "total_d07": ["math", "chemistry", "foreign_lang"],
+    "total_a0t": ["math", "physics", "informatics"], "total_k01": ["math", "literature", "informatics"],
 }
-SDG_SUB = {"Toan": "toan", "NguVan": "ngu_van", "VatLy": "vat_li", "HoaHoc": "hoa_hoc",
-           "SinhHoc": "sinh_hoc", "LichSu": "lich_su", "DiaLy": "dia_li", "GDCD": "gdcd",
-           "KinhTePhapLuat": "ktpl", "TinHoc": "tin_hoc",
-           "CongNgheCongNghiep": "cong_nghe_cn", "CongNgheNongNghiep": "cong_nghe_nn",
-           "NgoaiNgu": "ngoai_ngu"}
-SDG_KHOI = {"KhoiA": "th_a00", "KhoiA1": "th_a01", "KhoiA02": "th_a02", "KhoiB": "th_b00",
-            "KhoiC": "th_c00", "KhoiC01": "th_c01", "KhoiD": "th_d01", "KhoiD07": "th_d07"}
-CT2018_MAP = {"Toán": "toan", "Văn": "ngu_van", "Lí": "vat_li", "Hóa": "hoa_hoc",
-              "Sinh": "sinh_hoc", "Tin học": "tin_hoc", "Công nghệ công nghiệp": "cong_nghe_cn",
-              "Công nghệ nông nghiệp": "cong_nghe_nn", "Sử": "lich_su", "Địa": "dia_li",
-              "Giáo dục kinh tế và pháp luật": "ktpl", "Ngoại ngữ": "ngoai_ngu"}
-CT2006_MAP = {"Toán": "toan", "Văn": "ngu_van", "Lí": "vat_li", "Hóa": "hoa_hoc",
-              "Sinh": "sinh_hoc", "Sử": "lich_su", "Địa": "dia_li",
-              "Giáo dục công dân": "gdcd", "Ngoại ngữ": "ngoai_ngu"}
+SDG_SUB = {"Toan": "math", "NguVan": "literature", "VatLy": "physics", "HoaHoc": "chemistry",
+           "SinhHoc": "biology", "LichSu": "history", "DiaLy": "geography", "GDCD": "civic_education",
+           "KinhTePhapLuat": "econ_law", "TinHoc": "informatics",
+           "CongNgheCongNghiep": "tech_industry", "CongNgheNongNghiep": "tech_agri",
+           "NgoaiNgu": "foreign_lang"}
+SDG_KHOI = {"KhoiA": "total_a00", "KhoiA1": "total_a01", "KhoiA02": "total_a02", "KhoiB": "total_b00",
+            "KhoiC": "total_c00", "KhoiC01": "total_c01", "KhoiD": "total_d01", "KhoiD07": "total_d07"}
+CT2018_MAP = {"Toán": "math", "Văn": "literature", "Lí": "physics", "Hóa": "chemistry",
+              "Sinh": "biology", "Tin học": "informatics", "Công nghệ công nghiệp": "tech_industry",
+              "Công nghệ nông nghiệp": "tech_agri", "Sử": "history", "Địa": "geography",
+              "Giáo dục kinh tế và pháp luật": "econ_law", "Ngoại ngữ": "foreign_lang"}
+CT2006_MAP = {"Toán": "math", "Văn": "literature", "Lí": "physics", "Hóa": "chemistry",
+              "Sinh": "biology", "Sử": "history", "Địa": "geography",
+              "Giáo dục công dân": "civic_education", "Ngoại ngữ": "foreign_lang"}
 
-def norm_sbd(s: pd.Series) -> pd.Series:
+def norm_reg_no(s: pd.Series) -> pd.Series:
     n = pd.to_numeric(s.astype(str).str.strip(), errors="coerce").astype("Int64")
     out = n.astype(str).str.zfill(8)
     return out.where(out.str.match(r"^\d{8}$", na=False))
 
-def finalize(df: pd.DataFrame, nam: int, chuong_trinh: str = "") -> pd.DataFrame:
-    df["nam"] = nam
-    df["chuong_trinh"] = chuong_trinh
+def finalize(df: pd.DataFrame, year: int, curriculum: str = "") -> pd.DataFrame:
+    df["year"] = year
+    df["curriculum"] = curriculum
     for c in SUBJECTS:
         if c not in df.columns: df[c] = pd.NA
         df[c] = pd.to_numeric(df[c], errors="coerce")
@@ -50,36 +50,36 @@ def finalize(df: pd.DataFrame, nam: int, chuong_trinh: str = "") -> pd.DataFrame
             tot = df[cols].sum(axis=1).round(2)
             tot[df[cols].isna().any(axis=1)] = pd.NA
             df[combo] = tot
-    df = df.dropna(subset=["sbd"]).drop_duplicates(subset=["sbd"])
-    return df[["sbd", "tinh", "nam", "chuong_trinh"] + SUBJECTS + list(COMBOS)]
+    df = df.dropna(subset=["reg_no"]).drop_duplicates(subset=["reg_no"])
+    return df[["reg_no", "province_code", "year", "curriculum"] + SUBJECTS + list(COMBOS)]
 
-def load_sdg(path: str, nam: int) -> pd.DataFrame:
+def load_sdg(path: str, year: int) -> pd.DataFrame:
     df = pd.read_csv(path, dtype=str)
-    df = df.rename(columns={**SDG_SUB, "SOBAODANH": "sbd"})
-    if "SBD" in df.columns: df = df.rename(columns={"SBD": "sbd"})
-    df["sbd"] = norm_sbd(df["sbd"])
-    df["tinh"] = df["Tinh"].astype(str).str.strip().str.zfill(2)
+    df = df.rename(columns={**SDG_SUB, "SOBAODANH": "reg_no"})
+    if "SBD" in df.columns: df = df.rename(columns={"SBD": "reg_no"})
+    df["reg_no"] = norm_reg_no(df["reg_no"])
+    df["province_code"] = df["Tinh"].astype(str).str.strip().str.zfill(2)
     for khoi, combo in SDG_KHOI.items():
         if khoi in df.columns: df[combo] = pd.to_numeric(df[khoi], errors="coerce").round(2)
-    return finalize(df, nam)
+    return finalize(df, year)
 
-def load_anhdung(path: str, nam: int) -> pd.DataFrame:
+def load_anhdung(path: str, year: int) -> pd.DataFrame:
     df = pd.read_csv(path, dtype=str)
-    df["sbd"] = norm_sbd(df["sbd"])
-    df["tinh"] = df["sbd"].str[:2]
-    return finalize(df, nam)
+    df["reg_no"] = norm_reg_no(df["reg_no"])
+    df["province_code"] = df["reg_no"].str[:2]
+    return finalize(df, year)
 
-def load_xlsx(path: str, mapping: dict, nam: int, chuong_trinh: str) -> pd.DataFrame:
+def load_xlsx(path: str, mapping: dict, year: int, curriculum: str) -> pd.DataFrame:
     xl = pd.ExcelFile(path)
     parts = []
     for sh in xl.sheet_names:
         d = pd.read_excel(xl, sheet_name=sh)
         if d.empty or "SOBAODANH" not in d.columns: continue
-        parts.append(d.rename(columns={**mapping, "SOBAODANH": "sbd"}))
+        parts.append(d.rename(columns={**mapping, "SOBAODANH": "reg_no"}))
     df = pd.concat(parts, ignore_index=True)
-    df["sbd"] = norm_sbd(df["sbd"])
-    df["tinh"] = df["sbd"].str[:2]
-    return finalize(df, nam, chuong_trinh)
+    df["reg_no"] = norm_reg_no(df["reg_no"])
+    df["province_code"] = df["reg_no"].str[:2]
+    return finalize(df, year, curriculum)
 
 def main():
     ap = argparse.ArgumentParser()

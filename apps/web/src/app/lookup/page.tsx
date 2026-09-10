@@ -10,8 +10,8 @@ export default async function LookupPage({
 }) {
   const params = (await searchParams) ?? {};
   const parsed = Number(params.score);
-  const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.diem;
-  const combo = (params.combo ?? CURRENT_USER.toHop).toUpperCase();
+  const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.score;
+  const combo = (params.combo ?? CURRENT_USER.combo).toUpperCase();
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <p className="mx-auto w-fit rounded-full bg-[var(--secondary-container)] px-3 py-1.5 text-center text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">

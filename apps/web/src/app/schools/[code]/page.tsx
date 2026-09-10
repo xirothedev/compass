@@ -2,40 +2,40 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { TierBadge } from "@compass/ui";
 import { classifyBucket } from "@compass/ui";
-import { CURRENT_USER, REVIEWS, TRUONGS, getNganhsByTruong, getTruong } from "../../../mocks";
+import { CURRENT_USER, REVIEWS, SCHOOLS, getMajorsBySchool, getSchool } from "../../../mocks";
 import { getCutoffsBySchool, getReviewsBySchool } from "../../../data";
 import { DetailMajorFilter, FollowButton } from "../../../islands";
 
 export function generateStaticParams() {
-  return TRUONGS.map((t) => ({ code: t.ma.toLowerCase() }));
+  return SCHOOLS.map((t) => ({ code: t.code.toLowerCase() }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const school = getTruong(code);
-  return { title: school ? `${school.ten} - Compass` : "Không tìm thấy trường - Compass" };
+  const school = getSchool(code);
+  return { title: school ? `${school.name} - Compass` : "Không tìm thấy trường - Compass" };
 }
 
 export default async function SchoolDetailPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const school = getTruong(code);
+  const school = getSchool(code);
   if (!school) notFound();
-  const majors = (await getCutoffsBySchool(school.ma)) ?? getNganhsByTruong(school.ma);
+  const majors = (await getCutoffsBySchool(school.code)) ?? getMajorsBySchool(school.code);
   const rows = majors.map((m) => ({
-    code: m.maNganh,
-    name: m.ten,
-    combos: m.toHop.join(", "),
-    method: m.phuongThuc[0],
-    y2022: m.diemChuan.y2022,
-    y2023: m.diemChuan.y2023,
-    y2024: m.diemChuan.y2024,
-    tier: classifyBucket(CURRENT_USER.diem - m.diemChuan.y2024),
+    code: m.code,
+    name: m.name,
+    combos: m.combos.join(", "),
+    method: m.methods[0],
+    y2022: m.cutoffs.y2022,
+    y2023: m.cutoffs.y2023,
+    y2024: m.cutoffs.y2024,
+    tier: classifyBucket(CURRENT_USER.score - m.cutoffs.y2024),
   }));
-  const combos = [...new Set(majors.flatMap((m) => m.toHop))];
-  const cutoffs = majors.map((m) => m.diemChuan.y2024).filter((v) => v > 0);
+  const combos = [...new Set(majors.flatMap((m) => m.combos))];
+  const cutoffs = majors.map((m) => m.cutoffs.y2024).filter((v) => v > 0);
   const lo = cutoffs.length ? Math.min(...cutoffs) : 0;
   const hi = cutoffs.length ? Math.max(...cutoffs) : 0;
-  const reviews = (await getReviewsBySchool(school.ma)) ?? REVIEWS.filter((r) => r.truong === school.ma);
+  const reviews = (await getReviewsBySchool(school.code)) ?? REVIEWS.filter((r) => r.school_code === school.code);
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
@@ -43,29 +43,29 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
         <span aria-hidden> / </span>
         <Link href="/schools" className="hover:text-ink">Danh mục Trường &amp; Điểm chuẩn</Link>
         <span aria-hidden> / </span>
-        <span aria-current="page" className="text-ink">{school.ten}</span>
+        <span aria-current="page" className="text-ink">{school.name}</span>
       </nav>
 
       {/* Hero */}
       <div id="tong-quan" className="mt-4 grid gap-6 lg:grid-cols-12">
         <div className="lg:col-span-8">
           <div className="flex flex-wrap gap-1.5">
-            {[`Mã xét tuyển: ${school.ma}`, school.loaiHinh, school.khuVuc].map((b) => (
+            {[`Mã xét tuyển: ${school.code}`, school.kind, school.region].map((b) => (
               <span key={b} className="rounded-full bg-[var(--secondary-container)] px-2.5 py-1 text-xs font-semibold text-[var(--on-secondary-container)] dark:text-white">
                 {b}
               </span>
             ))}
           </div>
-          <h1 className="mt-3 text-[32px] font-bold leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-[48px]">{school.ten}</h1>
+          <h1 className="mt-3 text-[32px] font-bold leading-[40px] tracking-tight text-ink md:text-[40px] md:leading-[48px]">{school.name}</h1>
           <p className="mt-2 text-sm text-muted">
-            {school.tenTiengAnh} • {school.diaChi}
+            {school.name_en} • {school.address}
           </p>
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               ["Chương trình đào tạo", `${majors.length} ngành`],
               ["Biên độ điểm 2024", cutoffs.length ? `${lo.toFixed(2)} – ${hi.toFixed(2)}` : "—"],
-              ["Học phí chuẩn", school.hocPhi],
-              ["Tổ hợp chủ lực", school.toHopChuLuc.join(" · ")],
+              ["Học phí chuẩn", school.tuition],
+              ["Tổ hợp chủ lực", school.main_combos.join(" · ")],
             ].map(([l, v]) => (
               <div key={l} className="rounded-xl bg-surface p-3.5 shadow-sm">
                 <dt className="text-[11px] text-muted">{l}</dt>
@@ -76,16 +76,16 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
         </div>
         <aside className="h-fit rounded-2xl border border-line bg-surface p-5 lg:col-span-4">
           <p className="text-sm leading-relaxed text-body">
-            Khám phá cơ hội trúng tuyển theo mức điểm dự kiến của bạn ({CURRENT_USER.diem.toFixed(2)} · {CURRENT_USER.toHop}).
+            Khám phá cơ hội trúng tuyển theo mức điểm dự kiến của bạn ({CURRENT_USER.score.toFixed(2)} · {CURRENT_USER.combo}).
           </p>
           <div className="mt-4 flex flex-col gap-2">
             <Link
-              href={`/suggestions?score=${CURRENT_USER.diem.toFixed(2)}&combo=${CURRENT_USER.toHop}&school=${school.ma}`}
+              href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}`}
               className="inline-flex h-11 items-center justify-center rounded-lg bg-accent px-5 text-sm font-semibold text-on-accent hover:bg-accent-hover"
             >
               Tạo gợi ý nguyện vọng
             </Link>
-            <FollowButton code={school.ma} />
+            <FollowButton code={school.code} />
           </div>
           <p className="mt-3 text-[13px] text-muted">
             Ngoài THPTQG, trường còn xét tuyển bằng Kỳ thi Đánh giá tư duy (TSA).
@@ -145,10 +145,10 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
           <div className="grid gap-4 md:grid-cols-3">
             {reviews.length > 0 ? (
               reviews.map((r) => (
-                <figure key={r.tacGia} className="rounded-2xl bg-surface p-5 shadow-sm">
-                  <blockquote className="text-sm leading-relaxed text-body">“{r.noiDung}”</blockquote>
+                <figure key={r.author} className="rounded-2xl bg-surface p-5 shadow-sm">
+                  <blockquote className="text-sm leading-relaxed text-body">“{r.content}”</blockquote>
                   <figcaption className="mt-3 text-[13px] font-semibold text-ink">
-                    {r.tacGia} <span className="font-normal text-muted">• {r.vaiTro}</span>
+                    {r.author} <span className="font-normal text-muted">• {r.role}</span>
                   </figcaption>
                 </figure>
               ))
@@ -160,10 +160,10 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
 
       <div className="mt-10 flex flex-col gap-4 rounded-3xl bg-[#001736] p-8 text-white shadow-xl md:flex-row md:items-center md:justify-between md:p-12">
         <h2 className="max-w-xl text-xl font-semibold">
-          Điểm của bạn có cơ hội trúng tuyển ngành nào tại {school.ten}?
+          Điểm của bạn có cơ hội trúng tuyển ngành nào tại {school.name}?
         </h2>
         <Link
-          href={`/suggestions?score=${CURRENT_USER.diem.toFixed(2)}&combo=${CURRENT_USER.toHop}&school=${school.ma}`}
+          href={`/suggestions?score=${CURRENT_USER.score.toFixed(2)}&combo=${CURRENT_USER.combo}&school=${school.code}`}
           className="inline-flex h-11 shrink-0 items-center justify-center rounded-lg bg-[#006972] px-6 text-sm font-semibold text-white hover:bg-[#00838f]"
         >
           Mô phỏng cơ hội trúng tuyển
