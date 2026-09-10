@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = { title: "Không tìm thấy trang - Compass" };
 
 const QUICK_LINKS = [
-  { href: "/schools", label: "Catalog trường đại học" },
+  { href: "/schools", label: "Danh mục Trường" },
   { href: "/lookup", label: "Phổ điểm các tổ hợp" },
   { href: "/suggestions", label: "Chiến lược nguyện vọng" },
 ];
@@ -12,7 +12,7 @@ export default function NotFound() {
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-1 flex-col items-center justify-center px-6 py-16 text-center md:py-24">
       <p className="rounded-full border border-line bg-surface px-3 py-1 text-xs font-semibold text-muted">
-        Lỗi điều hướng 404 · HTTP Not Found
+        Lỗi điều hướng 404 · Không tìm thấy trang
       </p>
       <p className="mt-4 text-[80px] font-bold leading-none tracking-tight tabular-nums text-ink md:text-[120px]">
         404

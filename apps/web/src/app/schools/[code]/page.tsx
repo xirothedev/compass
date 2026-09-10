@@ -42,7 +42,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
   const reviews = (await getReviewsBySchool(school.code)) ?? REVIEWS.filter((r) => r.school_code === school.code);
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
-      <nav aria-label="Breadcrumb" className="text-[13px] text-muted">
+      <nav aria-label="Điều hướng" className="text-[13px] text-muted">
         <Link href="/" className="hover:text-ink">Trang chủ</Link>
         <span aria-hidden> / </span>
         <Link href="/schools" className="hover:text-ink">Danh mục Trường &amp; Điểm chuẩn</Link>

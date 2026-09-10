@@ -81,7 +81,7 @@ export default async function SuggestionsPage({
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
+      <nav aria-label="Điều hướng" className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
         <Link href="/" className="hover:text-ink">Trang chủ</Link>
         <span aria-hidden>›</span>
         <span aria-current="page" className="text-ink">Gợi ý Nguyện vọng thông minh</span>
@@ -145,7 +145,7 @@ export default async function SuggestionsPage({
 
       <section aria-label="Cấu trúc danh mục nguyện vọng" className="mt-8">
         <h2 className="text-[22px] font-semibold leading-[30px] tracking-tight text-ink">
-          Cấu trúc Danh mục Nguyện vọng (Portfolio Health)
+          Cấu trúc Danh mục Nguyện vọng
         </h2>
         <div className="mt-4 rounded-2xl border border-line bg-surface p-5">
           <PortfolioBar safe={safe} match={match} reach={reach} />
@@ -191,10 +191,10 @@ export default async function SuggestionsPage({
                   >
                     Xem tất cả trường
                   </Link>
-                  {" "}hoặc quay lại Onboarding.
+                  {" "}hoặc quay lại Định hướng.
                 </>
               ) : (
-                <>Chưa có ngành nào xét tổ hợp {combo} trong dữ liệu mẫu. Thử tổ hợp A00, D01 hoặc quay lại Onboarding.</>
+                <>Chưa có ngành nào xét tổ hợp {combo} trong dữ liệu mẫu. Thử tổ hợp A00, D01 hoặc quay lại Định hướng.</>
               )}
             </p>
           )}

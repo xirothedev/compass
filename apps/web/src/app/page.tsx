@@ -19,7 +19,7 @@ const FOCUS = [
   {
     no: "Tính năng trọng tâm 02",
     href: "/schools",
-    title: "Catalog Trường & Điểm chuẩn",
+    title: "Danh mục Trường & Điểm chuẩn",
     body: "Khám phá đề án tuyển sinh, so sánh biến động điểm chuẩn 3 năm gần nhất của các trường.",
     mini: "Đối chiếu chênh lệch điểm trúng tuyển 3 năm",
     link: "Duyệt danh bạ các trường",
@@ -52,19 +52,19 @@ const TRANSPARENCY = [
 const BUCKETS = [
   {
     tier: "safe" as const,
-    title: "Nhóm An Toàn (Safe)",
+    title: "Nhóm An Toàn",
     rate: "Tỉ lệ > 85%",
     body: "Điểm của bạn cao hơn điểm chuẩn dự kiến từ 1.5 đến 3.0 điểm. Giúp chắc suất trúng tuyển đợt 1.",
   },
   {
     tier: "match" as const,
-    title: "Nhóm Vừa Sức (Match)",
+    title: "Nhóm Vừa Sức",
     rate: "Tỉ lệ 50% - 85%",
     body: "Điểm chênh lệch trong khoảng dao động ±0.75 điểm so với chuẩn các năm. Cân nhắc thứ tự ưu tiên.",
   },
   {
     tier: "reach" as const,
-    title: "Nhóm Thử Thách (Reach)",
+    title: "Nhóm Thử Thách",
     rate: "Tỉ lệ 25% - 50%",
     body: "Các ngành mơ ước với điểm chuẩn cao hơn từ 0.5 đến 1.5 điểm. Tận dụng tối đa 2-3 nguyện vọng đầu.",
   },
@@ -114,7 +114,7 @@ export default function Home() {
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-[var(--surface-container-low)] px-6 py-3.5 text-sm font-medium text-ink transition-all hover:bg-[var(--surface-container)] sm:w-auto"
               >
                 <span aria-hidden className="text-[var(--accent)]">◉</span>
-                <span>Bắt đầu Onboarding</span>
+                <span>Bắt đầu Định hướng</span>
               </Link>
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-6 text-xs font-medium text-body">
@@ -262,7 +262,7 @@ export default function Home() {
           </div>
           <div className="lg:col-span-6">
             <div className="rounded-2xl bg-[var(--surface-container)] p-6 lg:p-8">
-              <h3 className="mb-4 text-lg font-semibold leading-[26px] text-ink">Cấu trúc mô hình Safe / Match / Reach</h3>
+              <h3 className="mb-4 text-lg font-semibold leading-[26px] text-ink">Cấu trúc mô hình An toàn / Vừa sức / Thử thách</h3>
               <ul className="flex flex-col gap-3">
                 {BUCKETS.map((b) => (
                   <li key={b.tier} className="flex gap-3 rounded-xl bg-surface p-4 shadow-sm">
@@ -294,7 +294,7 @@ export default function Home() {
                   Bắt đầu định hướng nguyện vọng của bạn ngay hôm nay
                 </h2>
                 <p className="mt-3 max-w-xl text-sm leading-[22px] text-[#adc7f8]">
-                  Chỉ mất 2 phút để nhập điểm dự kiến hoặc hoàn thiện Onboarding định hướng.
+                  Chỉ mất 2 phút để nhập điểm dự kiến hoặc hoàn thiện các bước Định hướng.
                 </p>
               </div>
               <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
@@ -308,7 +308,7 @@ export default function Home() {
                   href="/onboarding"
                   className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0d2c54] px-6 py-3.5 text-sm font-medium text-white transition-all hover:bg-[#164075]"
                 >
-                  Bắt đầu Onboarding <span aria-hidden>→</span>
+                  Bắt đầu Định hướng <span aria-hidden>→</span>
                 </Link>
               </div>
             </div>

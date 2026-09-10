@@ -726,11 +726,11 @@ export function OnboardingWizard() {
     <div className="mx-auto w-full max-w-5xl">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm font-semibold text-ink">
-          Tiến trình Onboarding [Bước {Math.min(step + 1, 4)}/4{step >= 4 ? " · Xác nhận" : ""}]
+          Tiến trình Định hướng [Bước {Math.min(step + 1, 4)}/4{step >= 4 ? " · Xác nhận" : ""}]
         </p>
         <p className="text-sm tabular-nums text-muted">Hoàn thành {Math.round(progress)}%</p>
       </div>
-      <ol className="mt-3 flex gap-2" aria-label="Các bước Onboarding">
+      <ol className="mt-3 flex gap-2" aria-label="Các bước Định hướng">
         {STEPS.map((s, i) => (
           <li key={s} className="flex-1">
             <span className={`block h-2 rounded-full ${i <= step ? "bg-accent" : "bg-line"}`} />
@@ -940,7 +940,7 @@ export function Dial({ value, label }: { value: number; label?: string }) {
 export function ExportCsv({ rows }: { rows: CutoffRow[] }) {
   const download = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const head = ["Thứ tự", "Mã ngành", "Tên chương trình", "Tổ hợp", "Phương thức", "2022", "2023", "2024", "Đánh giá"];
+    const head = ["Thứ tự", "Mã ngành", "Tên Ngành đào tạo", "Tổ hợp", "Phương thức", "2022", "2023", "2024", "Đánh giá"];
     const lines = rows.map((r, i) =>
       [i + 1, r.code, r.name, r.combos, r.method, r.y2022.toFixed(2), r.y2023.toFixed(2), r.y2024.toFixed(2), BUCKET_META[r.tier].label]
         .map(esc)
@@ -962,7 +962,7 @@ export function ExportCsv({ rows }: { rows: CutoffRow[] }) {
       onClick={download}
       className="inline-flex h-11 items-center rounded-lg border border-line bg-surface px-5 text-sm font-semibold text-ink hover:bg-surface-2"
     >
-      Xuất Excel (CSV)
+      Xuất tệp CSV
     </button>
   );
 }
