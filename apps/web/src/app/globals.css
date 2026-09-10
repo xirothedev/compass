@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+/* ponytail: scan @compass/ui sources so sm:/md:/lg: variants used only there get generated */
+@source "../../../../packages/ui/src";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #f8f9ff;
+  --foreground: #141c26;
+  /* ponytail: semantic tokens flip under .dark; components use these, never raw hex */
+  /* ponytail: values mirror Stitch designMd light (primary #001736, primary-container #0d2c54, secondary #006972) */
+  --canvas: #f8f9ff;
+  --surface: #ffffff;
+  --surface-2: #eff4ff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eff4ff;
+  --surface-container: #e7eefd;
+  --surface-container-high: #e1e9f7;
+  --surface-container-highest: #dbe3f1;
+  --surface-dim: #d3dae9;
+  --surface-bright: #f8f9ff;
+  --line: #e2e5eb;
+  --line-soft: #edf0f5;
+  --outline: #74777f;
+  --outline-variant: #c4c6d0;
+  --ink: #001736;
+  --body: #43474e;
+  --muted: #5c6470;
+  --faint: #74777f;
+  --cta: #0d2c54;
+  --cta-hover: #164075;
+  --on-cta: #ffffff;
+  --accent: #006972;
+  --accent-hover: #004f56;
+  --on-accent: #ffffff;
+  --accent-action: #00838f;
+  --primary-fixed: #d6e3ff;
+  --primary-fixed-dim: #adc7f8;
+  --secondary-container: #8feefc;
+  --on-secondary-container: #006d77;
+  --tertiary-fixed: #ffdcc2;
+  --chip-bg: #e7eefd;
+  --safe-text: #0e6245;
+  --safe-bg: #ebf7f0;
+  --safe-border: #a6e2c3;
+  --match-text: #035388;
+  --match-bg: #ebf5fa;
+  --match-border: #89c2e8;
+  --reach-text: #a04700;
+  --reach-bg: #fff4eb;
+  --reach-border: #f8c899;
+}
+
+.dark {
+  --background: #0a0f18;
+  --foreground: #eaf1ff;
+  --canvas: #0a0f18;
+  --surface: #121926;
+  --surface-2: #1c2638;
+  --surface-container-lowest: #121926;
+  --surface-container-low: #1c2638;
+  --surface-container: #1c2638;
+  --surface-container-high: #2d3d58;
+  --surface-container-highest: #2d3d58;
+  --surface-dim: #0a0f18;
+  --surface-bright: #1c2638;
+  --line: #243044;
+  --line-soft: #243044;
+  --outline: #94a3b8;
+  --outline-variant: #243044;
+  --ink: #eaf1ff;
+  --body: #94a3b8;
+  --muted: #94a3b8;
+  --faint: #64748b;
+  --cta: #2dd4bf;
+  --cta-hover: #14b8a6;
+  --on-cta: #0b111e;
+  --accent: #2dd4bf;
+  --accent-hover: #14b8a6;
+  --on-accent: #0b111e;
+  --accent-action: #2dd4bf;
+  --primary-fixed: #d6e3ff;
+  --primary-fixed-dim: #adc7f8;
+  --secondary-container: #164e63;
+  --on-secondary-container: #8feefc;
+  --tertiary-fixed: #451a03;
+  --chip-bg: rgba(56, 189, 248, 0.1);
+  --safe-text: #34d399;
+  --safe-bg: #08281e;
+  --safe-border: #0e6245;
+  --match-text: #60a5fa;
+  --match-bg: #09233b;
+  --match-border: #1e4e7a;
+  --reach-text: #fbbf24;
+  --reach-bg: #2c1805;
+  --reach-border: #803800;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-be-vietnam);
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-body: var(--body);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
+  --color-on-cta: var(--on-cta);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-chip: var(--chip-bg);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-navy-950: #001736;
+  --color-navy-900: #0d2c54;
+  --color-navy-700: #164075;
+  --color-navy-100: #d6e3ff;
+  --color-navy-50: #e7eefd;
+  --color-teal-700: #006972;
+  --color-teal-600: #00838f;
+  --color-teal-100: #8feefc;
+  --color-amber-brand: #e08324;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}

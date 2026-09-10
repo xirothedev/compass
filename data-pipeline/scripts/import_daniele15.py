@@ -2,9 +2,9 @@
 In: university.csv + diemchuan{2018..2023}_full.csv (raw download from GitHub)
 Out: data/schools.csv, majors.csv, cutoffs.csv + seed SQL
 Mapping:
-  schools.ma_truong = admission_code (Ministry code, e.g. BKA)
+  schools.school_code = admission_code (Ministry code, e.g. BKA)
   diemchuan.university_code -> admission_code via university.csv
-  phuong_thuc from note; to_hop filtered from subject_group
+  method from note; combo filtered from subject_group
 """
 import argparse, csv, re, unicodedata
 from collections import defaultdict
@@ -14,21 +14,21 @@ from urllib.request import urlretrieve
 BASE = "https://raw.githubusercontent.com/daniele15/DV-Final-Crawler/main/Crawler-hocmai/data"
 UNI_URL = f"{BASE}/university/university.csv"
 
-TO_HOP_RE = re.compile(r"^[ABCDTVHN][0-9]{2}[A-Z]?$")
+COMBO_RE = re.compile(r"^[ABCDTVHN][0-9]{2}[A-Z]?$")
 SKIP_TOKENS = {"XDHB", "DGNLHCM", "DGNLQGHN", "DGTD", "TSA", "HSA"}
 
-def slug_en(name: str) -> str:
+def slug(name: str) -> str:
     n = unicodedata.normalize("NFD", name).encode("ascii", "ignore").decode()
     n = re.sub(r"[^a-zA-Z0-9]+", "-", n.lower()).strip("-")
     return re.sub(r"-+", "-", n)[:120]
 
 def map_region(region: str) -> str:
     r = (region or "").lower()
-    if "nam" in r: return "Nam"
+    if "year" in r: return "Nam"
     if "trung" in r: return "Trung"
     return "Bac"
 
-def map_phuong_thuc(note: str, subject_group: str) -> str:
+def map_method(note: str, subject_group: str) -> str:
     n = (note or "") + " " + (subject_group or "")
     nl = n.lower()
     sg = (subject_group or "").upper()
@@ -41,12 +41,12 @@ def map_phuong_thuc(note: str, subject_group: str) -> str:
     if "dg nl" in nl or "năng lực" in nl: return "DGNL"
     return "THPTQG"
 
-def parse_to_hop(subject_group: str) -> list:
+def parse_combos(subject_group: str) -> list:
     out = []
     for tok in (subject_group or "").split(","):
         t = tok.strip().upper()
         if t in SKIP_TOKENS: continue
-        if TO_HOP_RE.match(t): out.append(t)
+        if COMBO_RE.match(t): out.append(t)
     return sorted(set(out))
 
 def main():
@@ -72,11 +72,11 @@ def main():
             dup[ucode].append(acode)
             if acode not in schools:
                 schools[acode] = {
-                    "ma_truong": acode, "slug_en": slug_en(row.get("university_name","") or acode),
-                    "ten": (row.get("university_name") or "").strip(),
-                    "tinh": (row.get("province") or "").strip(),
-                    "mien": map_region(row.get("region","")),
-                    "loai": "CaoDang" if "cao đẳng" in (row.get("university_name","").lower()) else "DaiHoc",
+                    "school_code": acode, "slug": slug(row.get("university_name","") or acode),
+                    "name": (row.get("university_name") or "").strip(),
+                    "province": (row.get("province") or "").strip(),
+                    "region": map_region(row.get("region","")),
+                    "kind": "CaoDang" if "cao đẳng" in (row.get("university_name","").lower()) else "DaiHoc",
                     "website": "", "source_url": (row.get("url") or "").strip(),
                 }
             if ucode and ucode not in ucode2acode:
@@ -99,20 +99,20 @@ def main():
                 ucode = (row.get("university_code") or "").strip()
                 acode = ucode2acode.get(ucode)
                 if not acode: skipped += 1; continue
-                try: diem = float(str(row.get("point","")).strip())
+                try: score = float(str(row.get("point","")).strip())
                 except ValueError: skipped += 1; continue
                 sg = row.get("subject_group","") or ""
-                pt = map_phuong_thuc(row.get("note",""), sg)
-                th = parse_to_hop(sg)
+                pt = map_method(row.get("note",""), sg)
+                combos = parse_combos(sg)
                 mcode = (row.get("major_code") or "").strip()
                 mname = (row.get("major_name") or "").strip()
                 if not mcode: skipped += 1; continue
                 majors[(acode, mcode, y)] = {
-                    "ma_truong": acode, "ma_nganh": mcode, "ten_nganh": mname,
-                    "to_hop": "{" + ",".join(th) + "}", "nam": y,
+                    "school_code": acode, "major_code": mcode, "major_name": mname,
+                    "combos": "{" + ",".join(combos) + "}", "year": y,
                 }
-                cutoffs.append({"ma_truong": acode, "ma_nganh": mcode, "nam": y,
-                                "phuong_thuc": pt, "diem": diem,
+                cutoffs.append({"school_code": acode, "major_code": mcode, "year": y,
+                                "method": pt, "score": score,
                                 "note": (row.get("note") or "").strip()[:200]})
                 n += 1
         print(f"[{y}] {n:,} rows ok")
@@ -120,13 +120,13 @@ def main():
 
     # 3) Write out CSVs
     with open(out/"schools.csv","w",newline="",encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","slug_en","ten","tinh","mien","loai","website","source_url"])
+        w = csv.DictWriter(f, fieldnames=["school_code","slug","name","province","region","kind","website","source_url"])
         w.writeheader(); w.writerows(schools.values())
     with open(out/"majors.csv","w",newline="",encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","ma_nganh","ten_nganh","to_hop","nam"])
+        w = csv.DictWriter(f, fieldnames=["school_code","major_code","major_name","combos","year"])
         w.writeheader(); w.writerows(majors.values())
     with open(out/"cutoffs.csv","w",newline="",encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","ma_nganh","nam","phuong_thuc","diem","note"])
+        w = csv.DictWriter(f, fieldnames=["school_code","major_code","year","method","score","note"])
         w.writeheader(); w.writerows(cutoffs)
     print(f"[save] {out}/schools.csv, majors.csv, cutoffs.csv")
 

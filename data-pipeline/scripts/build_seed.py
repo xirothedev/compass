@@ -2,15 +2,15 @@
 In:  out/daniele15/schools.csv, out/cutoffs_all.csv (run merge_cutoffs.py first),
       out/score_dist_*.csv, raw/vnn/*/*.json (province/website enrichment)
 Out: data/seed/{schools,cutoffs,majors,score_distribution}.csv + _quarantine.csv + REPORT.md
-Cutoff grain: (ma_truong, ma_nganh, to_hop, nam, phuong_thuc). Rows with bad range/keys -> quarantine.
+Cutoff grain: (school_code, major_code, combo, year, method). Rows with bad range/keys -> quarantine.
 """
 import argparse, csv, glob, json, re, unicodedata
 from collections import Counter
 from pathlib import Path
 
-TO_HOP_RE = re.compile(r"^[A-Z]{1,3}[0-9]{2}[A-Z0-9]*$")
+COMBO_RE = re.compile(r"^[A-Z]{1,3}[0-9]{2}[A-Z0-9]*$")
 # Manual map of source-internal combo codes to the Ministry standard (extend while reviewing quarantine)
-MANUAL_TOHOP = {}
+MANUAL_COMBOS = {}
 RANGES = {"THPTQG": (0, 30), "THPTQG40": (0, 40), "TSA": (0, 100),
           "DGNL-HCM": (0, 1200), "DGNL-HN": (0, 150), "DGNL": (0, 1200),
           "HocBa": (0, 30), "XTKH": (0, 40), "DTRieng": (0, 1600)}
@@ -18,21 +18,21 @@ RANGES = {"THPTQG": (0, 30), "THPTQG40": (0, 40), "TSA": (0, 100),
 BAC = ["hà nội", "hải phòng", "quảng ninh", "bắc ninh", "bắc giang", "vĩnh phúc",
        "phú thọ", "thái nguyên", "lạng sơn", "cao bằng", "hà giang", "tuyên quang",
        "lào cai", "yên bái", "điện biên", "lai châu", "sơn la", "hòa bình",
-       "hưng yên", "hải dương", "thái bình", "hà nam", "nam định", "ninh bình",
+       "hưng yên", "hải dương", "thái bình", "hà year", "year định", "ninh bình",
        "thanh hóa", "bắc kạn"]
 NAM = ["hồ chí minh", "tp. hồ chí minh", "tp hcm", "tphcm", "sài gòn", "đồng nai", "bình dương",
        "tây ninh", "long an", "tiền giang", "bến tre", "trà vinh", "vĩnh long",
        "đồng tháp", "an giang", "kiên giang", "cần thơ", "hậu giang", "sóc trăng",
        "bạc liêu", "cà mau", "bình phước", "bà rịa"]
 
-def mien_for(tinh: str) -> str:
-    t = (tinh or "").lower()
+def region_for(province: str) -> str:
+    t = (province or "").lower()
     if any(k in t for k in BAC): return "Bac"
     if any(k in t for k in NAM): return "Nam"
     return "Trung" if any(k in t for k in TRUNG) else ""
 
 TRUNG = ["nghệ an", "hà tĩnh", "quảng trị", "huế", "đà nẵng", "quảng ngãi",
-    "gia lai", "khánh hòa", "đắk lắk", "lâm đồng", "quảng bình", "quảng nam",
+    "gia lai", "khánh hòa", "đắk lắk", "lâm đồng", "quảng bình", "quảng year",
     "bình định", "phú yên", "ninh thuận", "bình thuận", "kon tum", "đắk nông",
     "thừa thiên"]
 # Special cases that cannot be inferred from the name (hospitals/central-level ones...)
@@ -59,15 +59,15 @@ OLD_PROVINCES = ["Kiên Giang", "Bà Rịa - Vũng Tàu", "Bình Dương", "Long
     "Ninh Thuận", "Bình Thuận", "Kon Tum", "Đắk Nông", "Thừa Thiên - Huế",
     "Vĩnh Phúc", "Bình Phước"]
 
-def extract_tinh(ten: str) -> str:
-    t = f" {(ten or '').lower()} "
+def extract_province(name: str) -> str:
+    t = f" {(name or '').lower()} "
     for a, canon in PROV_ALIAS.items():
         if a in t: return canon
     for p in PROVINCES + OLD_PROVINCES:
         if p.lower() in t: return p
     return ""
 
-def slug_en(name: str) -> str:
+def slug(name: str) -> str:
     n = unicodedata.normalize("NFD", name or "").encode("ascii", "ignore").decode()
     return re.sub(r"-+", "-", re.sub(r"[^a-zA-Z0-9]+", "-", n.lower()).strip("-"))[:120]
 
@@ -88,7 +88,7 @@ def main():
     schools = {}
     with open(base / "out/daniele15/schools.csv", encoding="utf-8") as f:
         for r in csv.DictReader(f):
-            schools[r["ma_truong"]] = r
+            schools[r["school_code"]] = r
     enriched = 0
     for p in glob.glob(str(base / "raw/vnn/*/*.json")):
         try: m = (json.load(open(p, encoding="utf-8")).get("data") or {}).get("model") or {}
@@ -96,7 +96,7 @@ def main():
         info = (m.get("universitySchool") or [{}])[0]
         code = info.get("code")
         if code in schools:
-            if info.get("provinceName"): schools[code]["tinh"] = info["provinceName"]
+            if info.get("provinceName"): schools[code]["province"] = info["provinceName"]
             if info.get("website"): schools[code]["website"] = info["website"]
             enriched += 1
     report.append(f"schools base: {len(schools)}, enriched from VNN: {enriched}")
@@ -114,24 +114,24 @@ def main():
         except Exception: continue
         if s.get("code") and s["code"] not in rawinfo:
             rawinfo[s["code"]] = (s.get("name", ""), "", "")
-    missing = sorted({c["ma_truong"] for c in cutoffs} - set(schools))
+    missing = sorted({c["school_code"] for c in cutoffs} - set(schools))
     for code in missing:
-        ten, tinh, web = rawinfo.get(code, (code, "", ""))
-        if not tinh: tinh = extract_tinh(ten)
-        if not tinh: tinh = MANUAL_SCHOOL_PROV.get(code, "")
-        schools[code] = {"ma_truong": code, "slug_en": slug_en(ten) or code.lower(),
-                         "ten": ten, "tinh": tinh, "mien": mien_for(f"{ten} {tinh}"), "loai": "DaiHoc",
+        name, province, web = rawinfo.get(code, (code, "", ""))
+        if not province: province = extract_province(name)
+        if not province: province = MANUAL_SCHOOL_PROV.get(code, "")
+        schools[code] = {"school_code": code, "slug": slug(name) or code.lower(),
+                         "name": name, "province": province, "region": region_for(f"{name} {province}"), "kind": "DaiHoc",
                          "website": web, "source_url": ""}
-    bad = sorted(c for c, s in schools.items() if not s["tinh"] or not s["mien"])
+    bad = sorted(c for c, s in schools.items() if not s["province"] or not s["region"])
     if bad:
-        raise SystemExit(f"[fail] {len(bad)} schools missing tinh/mien, add them to MANUAL_SCHOOL_PROV: {bad}")
+        raise SystemExit(f"[fail] {len(bad)} schools missing province/region, add them to MANUAL_SCHOOL_PROV: {bad}")
     report.append(f"school stubs added: {len(missing)}")
-    nomien = sum(1 for s in schools.values() if not s.get("mien"))
+    nomien = sum(1 for s in schools.values() if not s.get("region"))
     for s in schools.values():
-        if not s.get("mien"): s["mien"] = mien_for(f"{s.get('ten','')} {s.get('tinh','')}")
-    report.append(f"schools missing mien after inference: {sum(1 for s in schools.values() if not s.get('mien'))} (before: {nomien})")
+        if not s.get("region"): s["region"] = region_for(f"{s.get('name','')} {s.get('province','')}")
+    report.append(f"schools missing region after inference: {sum(1 for s in schools.values() if not s.get('region'))} (before: {nomien})")
 
-    # ten_nganh for daniele15 rows (raw has major_name, derived lost it)
+    # major_name for daniele15 rows (raw has major_name, derived lost it)
     name_map, ucode2a = {}, {}
     try:
         with open(base / "raw/daniele15/university.csv", encoding="utf-8-sig") as f:
@@ -150,62 +150,62 @@ def main():
         name_map = {k: v.most_common(1)[0][0] for k, v in name_map.items()}
     except FileNotFoundError:
         pass
-    report.append(f"ten_nganh resolved from raw daniele15: {len(name_map)} (truong,nganh) pairs")
+    report.append(f"major_name resolved from raw daniele15: {len(name_map)} (truong,nganh) pairs")
 
     seen_slug, for_rename = set(), 0
     for s in schools.values():
-        if not s.get("slug_en"): s["slug_en"] = s["ma_truong"].lower()
-        if s["slug_en"] in seen_slug:
-            s["slug_en"] = f"{s['slug_en']}-{s['ma_truong'].lower()}"; for_rename += 1
-        seen_slug.add(s["slug_en"])
+        if not s.get("slug"): s["slug"] = s["school_code"].lower()
+        if s["slug"] in seen_slug:
+            s["slug"] = f"{s['slug']}-{s['school_code'].lower()}"; for_rename += 1
+        seen_slug.add(s["slug"])
     with open(seed / "schools.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","slug_en","ten","tinh","mien","loai","website","source_url"])
+        w = csv.DictWriter(f, fieldnames=["school_code","slug","name","province","region","kind","website","source_url"])
         w.writeheader(); w.writerows(schools.values())
     report.append(f"schools seed: {len(schools)} (slug collisions renamed: {for_rename})")
 
     # ---- 2) CUTOFFS: validate range + keys ----
     majors, clean, quar = {}, [], []
-    QFIELDS = ["ma_truong","ma_nganh","ten_nganh","to_hop","diem","diem_thang",
-               "phuong_thuc","nam","ghi_chu","nguon","reason"]
+    QFIELDS = ["school_code","major_code","major_name","combo","score","scale",
+               "method","year","note","source","reason"]
     def q(row, reason): quar.append({k: row.get(k, "") for k in QFIELDS[:-1]} | {"reason": reason})
     for c in cutoffs:
-        try: diem = float(c["diem"])
+        try: score = float(c["score"])
         except (ValueError, TypeError): q(c, "diem_nan"); continue
-        if not c["ma_truong"] or not c["ma_nganh"] or c["ma_nganh"] == "X" or not c["nam"]:
-            q(c, "thieu_khoa" if c["ma_nganh"] != "X" else "ma_nganh_X"); continue
-        th = MANUAL_TOHOP.get(c["to_hop"], c["to_hop"])
-        if th and not TO_HOP_RE.match(th): q(c, f"to_hop_la:{c['to_hop']}"); continue
-        c = {**c, "to_hop": th}
-        note = (c.get("ghi_chu") or "").lower()
+        if not c["school_code"] or not c["major_code"] or c["major_code"] == "X" or not c["year"]:
+            q(c, "missing_key" if c["major_code"] != "X" else "major_code_X"); continue
+        combo = MANUAL_COMBOS.get(c["combo"], c["combo"])
+        if combo and not COMBO_RE.match(combo): q(c, f"to_hop_la:{c['combo']}"); continue
+        c = {**c, "combo": combo}
+        note = (c.get("note") or "").lower()
         note1200 = "1200" in note or "quy đổi" in note or "quy doi" in note
-        if c.get("diem_thang") != "40" and c["phuong_thuc"] == "THPTQG" and 30 < diem <= 40:
-            c["diem_thang"] = "40"
-            c["ghi_chu"] = (c.get("ghi_chu", "") + " | thang 40 (suy ra)").strip(" |")[:200]
-        scale = "THPTQG40" if c.get("diem_thang") == "40" else c["phuong_thuc"]
+        if c.get("scale") != "40" and c["method"] == "THPTQG" and 30 < score <= 40:
+            c["scale"] = "40"
+            c["note"] = (c.get("note", "") + " | thang 40 (suy ra)").strip(" |")[:200]
+        scale = "THPTQG40" if c.get("scale") == "40" else c["method"]
         lo, hi = RANGES.get(scale, (None, None)) if not note1200 else (0, 1200)
-        if lo is not None and not (lo < diem <= hi):
-            q(c, f"diem_ngoai_range:{diem}"); continue
-        if not c.get("ten_nganh"):
-            c["ten_nganh"] = name_map.get((c["ma_truong"], c["ma_nganh"]), "")
-        majors[(c["ma_truong"], c["ma_nganh"], c["nam"])] = {
-            "ma_truong": c["ma_truong"], "ma_nganh": c["ma_nganh"],
-            "ten_nganh": c.get("ten_nganh", ""), "nam": c["nam"]}
+        if lo is not None and not (lo < score <= hi):
+            q(c, f"diem_ngoai_range:{score}"); continue
+        if not c.get("major_name"):
+            c["major_name"] = name_map.get((c["school_code"], c["major_code"]), "")
+        majors[(c["school_code"], c["major_code"], c["year"])] = {
+            "school_code": c["school_code"], "major_code": c["major_code"],
+            "major_name": c.get("major_name", ""), "year": c["year"]}
         clean.append({k: c.get(k, "") for k in
-            ["ma_truong","ma_nganh","ten_nganh","to_hop","diem","diem_thang",
-             "phuong_thuc","nam","ghi_chu","nguon","source_url"]})
+            ["school_code","major_code","major_name","combo","score","scale",
+             "method","year","note","source","source_url"]})
     with open(seed / "cutoffs.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","ma_nganh","ten_nganh","to_hop","diem",
-            "diem_thang","phuong_thuc","nam","ghi_chu","nguon","source_url"])
+        w = csv.DictWriter(f, fieldnames=["school_code","major_code","major_name","combo","score",
+            "scale","method","year","note","source","source_url"])
         w.writeheader(); w.writerows(clean)
     with open(seed / "majors.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","ma_nganh","ten_nganh","nam"])
+        w = csv.DictWriter(f, fieldnames=["school_code","major_code","major_name","year"])
         w.writeheader(); w.writerows(majors.values())
     with open(seed / "_quarantine.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ma_truong","ma_nganh","ten_nganh","to_hop","diem",
-            "diem_thang","phuong_thuc","nam","ghi_chu","nguon","reason"])
+        w = csv.DictWriter(f, fieldnames=["school_code","major_code","major_name","combo","score",
+            "scale","method","year","note","source","reason"])
         w.writeheader(); w.writerows(quar)
     # Bucket quarantine reasons by category so REPORT.md stays readable:
-    # raw to_hop values can contain non-ASCII text, so they are counted, not dumped.
+    # raw combo values can contain non-ASCII text, so they are counted, not dumped.
     qcat = Counter()
     for r in quar:
         reason = r["reason"]
@@ -215,12 +215,12 @@ def main():
     report.append(f"cutoffs seed: {len(clean)} (quarantined: {len(quar)})")
     for label in ["out-of-range scores (diem_ngoai_range:*)",
                   "unrecognized subject combos (to_hop_la:*)",
-                  "ma_nganh_X", "thieu_khoa", "diem_nan"]:
+                  "major_code_X", "missing_key", "diem_nan"]:
         if qcat.get(label): report.append(f"quarantine {label}: {qcat.pop(label)}")
     for label in sorted(qcat): report.append(f"quarantine {label}: {qcat[label]}")
     report.append(f"majors seed: {len(majors)}")
 
-    # ---- 3) SCORE_DISTRIBUTION: concat years + tinh_new (year-aware) ----
+    # ---- 3) SCORE_DISTRIBUTION: concat years + province_code_new (year-aware) ----
     from province_data import PROVINCE_MAP
     pmap = {k: v[0] for k, v in PROVINCE_MAP.items()}
     newcodes = {v[0] for v in PROVINCE_MAP.values()}
@@ -229,20 +229,20 @@ def main():
         for r in csv.DictReader(open(p, encoding="utf-8")):
             # 2026 uses new province codes (post-merger): prefer identity, fallback old map.
             # 2023-2025 exams predate the merger: prefer the old So map.
-            t = (r.get("tinh") or "")
-            y = str(r.get("nam", ""))
+            t = (r.get("province") or "")
+            y = str(r.get("year", ""))
             if y == "2026":
                 hit = (t if t in newcodes else "") or pmap.get(t, "")
             else:
                 hit = pmap.get(t, "") or (t if t in newcodes else "")
-            r["tinh_new"] = hit
+            r["province_code_new"] = hit
             if t and not hit: unmapped[f"{y}:{t}"] += int(r["count"])
             dist.append(r)
     with open(seed / "score_distribution.csv", "w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=["ky_thi","nam","to_hop","tinh","tinh_new","chuong_trinh","diem","count"])
+        w = csv.DictWriter(f, fieldnames=["exam","year","combo","province","province_code_new","curriculum","score","count"])
         w.writeheader(); w.writerows(dist)
     report.append(f"score_distribution seed: {len(dist)} rows")
-    report.append(f"tinh_new: mapped {len(pmap)} old codes; unmapped: {dict(unmapped)}")
+    report.append(f"province_code_new: mapped {len(pmap)} old codes; unmapped: {dict(unmapped)}")
 
     (seed / "REPORT.md").write_text("# Seed report\n\n" + "\n".join(f"- {l}" for l in report) + "\n")
     print("\n".join(report))
