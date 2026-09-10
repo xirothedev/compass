@@ -1,5 +1,8 @@
 // Mock catalog data. Shape follows domain glossary (catalog): Trường, Ngành,
 // Điểm chuẩn per year, Phương thức xét tuyển, Tổ hợp xét tuyển.
+import { cutoffForYear } from "@compass/ui";
+
+export { cutoffForYear };
 export type School = {
   code: string;
   name: string;
@@ -20,7 +23,7 @@ export type Major = {
   school_code: string;
   combos: string[];
   methods: string[];
-  cutoffs: { y2022: number; y2023: number; y2024: number };
+  cutoffs: { y2022: number; y2023: number; y2024: number; y2025: number };
   quota: string;
   tuition: string;
 };
@@ -58,7 +61,8 @@ const major = (
   school_code,
   combos,
   methods: ["Thi tốt nghiệp THPTQG", "Đánh giá tư duy (TSA)"],
-  cutoffs: { y2022: cutoffs[0], y2023: cutoffs[1], y2024: cutoffs[2] },
+  // ponytail: mock y2025 = y2024 + 0.15 until live 2025 rows land
+  cutoffs: { y2022: cutoffs[0], y2023: cutoffs[1], y2024: cutoffs[2], y2025: Math.min(30, Math.round((cutoffs[2] + 0.15) * 100) / 100) },
   quota,
   tuition: tuition ?? "28 - 32 triệu/năm",
 });
@@ -116,12 +120,21 @@ export function getSchool(code: string): School | undefined {
 }
 
 // ponytail: one mapper for SCHOOLS -> SchoolCard shape, shared by home + schools pages
-export function toCard(t: School) {
+
+export function getSchoolCutoff(code: string, year: number): number {
+  const majors = MAJORS.filter((n) => n.school_code === code);
+  const vals = majors.map((m) => cutoffForYear(m.cutoffs, year)).filter((v) => v > 0);
+  if (!vals.length) return getSchool(code)?.cutoff2024 ?? 0;
+  return Math.max(...vals);
+}
+
+export function toCard(t: School, year = 2024) {
   return {
     code: t.code,
     name: t.name,
     combos: t.main_combos,
-    cutoff2024: t.cutoff2024,
+    cutoff: getSchoolCutoff(t.code, year),
+    year,
     trend: t.trend,
     tuition: t.tuition,
     region: t.region,

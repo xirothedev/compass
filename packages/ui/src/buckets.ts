@@ -1,4 +1,4 @@
-// ponytail: single source for Safe/Match/Reach; thresholds agreed in grill (delta vs cutoff 2024)
+// ponytail: single source for Safe/Match/Reach; thresholds agreed in grill (delta vs cutoff selected year)
 export type Bucket = "safe" | "match" | "reach";
 
 export const BUCKET_META: Record<
@@ -31,7 +31,7 @@ export const BUCKET_META: Record<
   },
 };
 
-/** delta = userScore - cutoff2024. Du da (>=1) -> safe, can bang (>=-0.5) -> match, else reach. */
+/** delta = userScore - cutoff(selected year). Du da (>=1) -> safe, can bang (>=-0.5) -> match, else reach. */
 export function classifyBucket(delta: number): Bucket {
   if (delta >= 1) return "safe";
   if (delta >= -0.5) return "match";

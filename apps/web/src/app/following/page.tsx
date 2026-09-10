@@ -5,7 +5,7 @@ import { FollowingList } from "../../islands";
 export const metadata = { title: "Danh sách theo dõi - Compass" };
 
 export default function FollowingPage() {
-  const cards = SCHOOLS.map(toCard);
+  const cards = SCHOOLS.map((t) => toCard(t));
   const majors = MAJORS.length;
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">

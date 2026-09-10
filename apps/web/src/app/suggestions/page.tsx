@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { BUCKET_META, PortfolioBar } from "@compass/ui";
 import { interpRank, rankPercentile } from "@compass/ui";
-import { CURRENT_USER, MAJORS, SCHOOLS } from "../../mocks";
-import { SuggestionList } from "../../islands";
+import { CURRENT_USER, MAJORS, SCHOOLS, cutoffForYear } from "../../mocks";
+import { parseYear } from "../../data";
+import { SuggestionList, YearSelect } from "../../islands";
 
 export async function generateMetadata({
   searchParams,
@@ -19,12 +21,13 @@ export async function generateMetadata({
 export default async function SuggestionsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ score?: string; combo?: string; school?: string; group?: string; region?: string; budget?: string; strategy?: string }>;
+  searchParams?: Promise<{ score?: string; combo?: string; school?: string; group?: string; region?: string; budget?: string; strategy?: string; year?: string }>;
 }) {
   const params = (await searchParams) ?? {};
   const parsed = Number(params.score);
   const score = Number.isFinite(parsed) && parsed >= 0 && parsed <= 30 ? parsed : CURRENT_USER.score;
   const combo = (params.combo ?? CURRENT_USER.combo).toUpperCase();
+  const year = parseYear(params.year);
   const group = params.group ?? "";
   const region = params.region ?? "";
   const budget = params.budget ?? "";
@@ -56,7 +59,7 @@ export default async function SuggestionsPage({
     if (!budgetOk(n.tuition) && school && !budgetOk(school.tuition)) return false;
     return true;
   }).map((n) => {
-    const delta = score - n.cutoffs.y2024;
+    const delta = score - cutoffForYear(n.cutoffs, year);
     const school = SCHOOLS.find((t) => t.code === n.school_code);
     return {
       code: n.code,
@@ -66,6 +69,7 @@ export default async function SuggestionsPage({
       y2022: n.cutoffs.y2022,
       y2023: n.cutoffs.y2023,
       y2024: n.cutoffs.y2024,
+      y2025: n.cutoffs.y2025,
       tier: bucketOf(delta),
       delta,
       quota: n.quota,
@@ -86,9 +90,14 @@ export default async function SuggestionsPage({
         <span aria-hidden>›</span>
         <span aria-current="page" className="text-ink">Gợi ý Nguyện vọng thông minh</span>
         <span className="ml-auto hidden rounded-full border border-line bg-surface px-2.5 py-1 text-xs sm:block">
-          Quy tắc đối sánh Điểm chuẩn 2024
+          Quy tắc đối sánh Điểm chuẩn {year}
         </span>
       </nav>
+      <div className="mt-4">
+        <Suspense>
+          <YearSelect year={year} />
+        </Suspense>
+      </div>
 
       <div className="mt-4 rounded-2xl border border-line bg-surface p-5">
         <div className="flex flex-wrap items-center gap-3">
@@ -123,7 +132,7 @@ export default async function SuggestionsPage({
       </h1>
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
         Quy tắc đối sánh Điểm chuẩn của Compass đã đối chiếu điểm số {score.toFixed(2)} (tổ hợp {combo}) của bạn với
-        điểm chuẩn 2024, chia 3 giỏ <strong className="font-semibold text-ink">An toàn</strong> ·{" "}
+        điểm chuẩn {year}, chia 3 giỏ <strong className="font-semibold text-ink">An toàn</strong> ·{" "}
         <strong className="font-semibold text-ink">Vừa sức</strong> ·{" "}
         <strong className="font-semibold text-ink">Thử thách</strong>.
       </p>
@@ -179,7 +188,7 @@ export default async function SuggestionsPage({
         </h2>
         <div className="mt-4">
           {scored.length > 0 ? (
-            <SuggestionList rows={scored} deltas={deltas} score={score} />
+            <SuggestionList rows={scored} deltas={deltas} score={score} year={year} />
           ) : (
             <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
               {schoolFilter ? (

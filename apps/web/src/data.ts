@@ -1,32 +1,44 @@
 import { getSupabase } from "@compass/db";
+import { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear } from "@compass/ui";
 import type { Major, Review } from "./mocks";
 
+export { AVAILABLE_YEARS, DEFAULT_YEAR, parseYear };
 // ponytail: live Supabase for volatile data (cutoffs, reviews, rank distribution).
 // Curated catalog fields (groups, display tuition, region) have no DB columns yet,
-// so schools list stays on mocks until the schema grows them. Null = use mocks.
-export async function getCutoffsBySchool(code: string): Promise<Major[] | null> {
+// so schools list stays on mocks until the schema grows them.
+// Null = no Supabase (use mocks in dev). [] = live but no rows (show empty state).
+
+export async function getCutoffsBySchool(code: string, year = DEFAULT_YEAR): Promise<Major[] | null> {
   const sb = getSupabase();
   if (!sb) return null;
   try {
     const upper = code.toUpperCase();
-    const [{ data: majors }, { data: cuts }] = await Promise.all([
-      sb.from("majors").select("major_code,major_name,combos,quota,tuition_per_year").eq("school_code", upper).eq("year", 2024),
-      sb.from("cutoffs").select("major_code,combo,year,score").eq("school_code", upper).in("year", [2022, 2023, 2024]).eq("method", "THPTQG"),
+    const selectedYear = parseYear(year);
+    const [majorsRes, cutsRes] = await Promise.all([
+      sb.from("majors").select("major_code,major_name,combos,quota,tuition_per_year").eq("school_code", upper).eq("year", selectedYear),
+      sb.from("cutoffs").select("major_code,combo,year,score").eq("school_code", upper).in("year", [2022, 2023, 2024, 2025]).eq("method", "THPTQG"),
     ]);
-    if (!majors?.length) return null;
-    const byYear = new Map<string, { y2022: number; y2023: number; y2024: number }>();
-    for (const c of cuts ?? []) {
+    let majors = majorsRes.data;
+    if (!majors?.length) {
+      // ponytail: majors are versioned per year; fall back to 2024 list so old rows still show
+      const fb = await sb.from("majors").select("major_code,major_name,combos,quota,tuition_per_year").eq("school_code", upper).eq("year", 2024);
+      majors = fb.data;
+    }
+    if (!majors?.length) return [];
+    const byYear = new Map<string, { y2022: number; y2023: number; y2024: number; y2025: number }>();
+    for (const c of cutsRes.data ?? []) {
       const k = `${c.major_code}|${c.combo ?? ""}`;
-      const e = byYear.get(k) ?? { y2022: NaN, y2023: NaN, y2024: NaN };
+      const e = byYear.get(k) ?? { y2022: NaN, y2023: NaN, y2024: NaN, y2025: NaN };
       if (c.year === 2022) e.y2022 = Number(c.score);
       if (c.year === 2023) e.y2023 = Number(c.score);
       if (c.year === 2024) e.y2024 = Number(c.score);
+      if (c.year === 2025) e.y2025 = Number(c.score);
       byYear.set(k, e);
     }
     const fmtTrieu = (v: number | null) => (v ? `~${Math.round(v / 1_000_000)} triệu/năm` : "Liên hệ trường");
     return majors.map((m) => {
       const combos: string[] = Array.isArray(m.combos) && m.combos.length > 0 ? m.combos : ["A00"];
-      const y = byYear.get(`${m.major_code}|${combos[0]}`) ?? { y2022: NaN, y2023: NaN, y2024: NaN };
+      const y = byYear.get(`${m.major_code}|${combos[0]}`) ?? { y2022: NaN, y2023: NaN, y2024: NaN, y2025: NaN };
       return {
         code: m.major_code,
         name: m.major_name,
@@ -37,13 +49,14 @@ export async function getCutoffsBySchool(code: string): Promise<Major[] | null> 
           y2022: Number.isFinite(y.y2022) ? y.y2022 : 0,
           y2023: Number.isFinite(y.y2023) ? y.y2023 : 0,
           y2024: Number.isFinite(y.y2024) ? y.y2024 : 0,
+          y2025: Number.isFinite(y.y2025) ? y.y2025 : 0,
         },
         quota: m.quota ? `Chỉ tiêu: ~${m.quota} sinh viên` : "Chỉ tiêu: đang cập nhật",
         tuition: fmtTrieu(m.tuition_per_year),
       };
     });
   } catch {
-    return null;
+    return [];
   }
 }
 
@@ -57,7 +70,8 @@ export async function getReviewsBySchool(code: string): Promise<Review[] | null>
       .eq("school_code", code.toUpperCase())
       .eq("status", "published")
       .limit(6);
-    if (error || !data?.length) return null;
+    if (error) return [];
+    if (!data?.length) return [];
     return data
       .filter((r) => r.comment || (r.criteria as Record<string, number> | null))
       .map((r, i) => {
@@ -74,7 +88,7 @@ export async function getReviewsBySchool(code: string): Promise<Review[] | null>
         };
       });
   } catch {
-    return null;
+    return [];
   }
 }
 

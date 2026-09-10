@@ -3,10 +3,28 @@
 import { startTransition, useActionState, useDeferredValue, useEffect, useMemo, useOptimistic, useRef, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { BUCKET_META, BucketHeader, CutoffTable, FilterChip, SchoolCard, TierBadge, YearSwitcher, AVAILABLE_YEARS, cutoffForYear, RANK_TOTAL, interpRank, rankPercentile, type Bucket, type CutoffRow, type SchoolCardData } from "@compass/ui";
+import { useRouter, useSearchParams } from "next/navigation";
 import { calcRank, saveOrder } from "./actions";
 import { MAJORS } from "./mocks";
 import { useProfile } from "./profile";
+
+// ponytail: client select mirrors ?year= in URL so share/back keep the year
+export function YearSelect({ year }: { year: number }) {
+  const router = useRouter();
+  const params = useSearchParams();
+  return (
+    <YearSwitcher
+      year={year}
+      years={AVAILABLE_YEARS}
+      onChange={(next) => {
+        const q = new URLSearchParams(params.toString());
+        q.set("year", String(next));
+        router.push(`?${q.toString()}`);
+      }}
+    />
+  );
+}
 
 /* ---------- Theme toggle (header) ---------- */
 export function ThemeToggle() {
@@ -51,8 +69,8 @@ const SCORE_RANGES = [
 ] as const;
 
 const SCHOOL_SORTS = [
-  { value: "cutoff-desc", label: "Điểm chuẩn 2024 (Cao → Thấp)" },
-  { value: "cutoff-asc", label: "Điểm chuẩn 2024 (Thấp → Cao)" },
+  { value: "cutoff-desc", label: "Điểm chuẩn (Cao → Thấp)" },
+  { value: "cutoff-asc", label: "Điểm chuẩn (Thấp → Cao)" },
   { value: "az", label: "Theo A-Z" },
 ] as const;
 
@@ -62,12 +80,14 @@ export function SchoolFilters({
   groups,
   kinds,
   initialQuery = "",
+  year,
 }: {
   schools: (SchoolCardData & { region: string; groups: string[]; kind: string })[];
   regions: string[];
   groups: string[];
   kinds: string[];
   initialQuery?: string;
+  year: number;
 }) {
   const [query, setQuery] = useState(initialQuery);
   const [region, setRegion] = useState<string | null>(null);
@@ -87,11 +107,11 @@ export function SchoolFilters({
         (!group || s.groups.includes(group)) &&
         (!kind || s.kind === kind) &&
         (!score ||
-          (score === "27+" ? s.cutoff2024 >= 27 : score === "24-27" ? s.cutoff2024 >= 24 && s.cutoff2024 < 27 : score === "20-24" ? s.cutoff2024 >= 20 && s.cutoff2024 < 24 : s.cutoff2024 < 20)),
+          (score === "27+" ? s.cutoff >= 27 : score === "24-27" ? s.cutoff >= 24 && s.cutoff < 27 : score === "20-24" ? s.cutoff >= 20 && s.cutoff < 24 : s.cutoff < 20)),
     );
-    if (sort === "cutoff-asc") arr.sort((a, b) => a.cutoff2024 - b.cutoff2024);
+    if (sort === "cutoff-asc") arr.sort((a, b) => a.cutoff - b.cutoff);
     else if (sort === "az") arr.sort((a, b) => a.name.localeCompare(b.name, "vi"));
-    else arr.sort((a, b) => b.cutoff2024 - a.cutoff2024);
+    else arr.sort((a, b) => b.cutoff - a.cutoff);
     return arr;
   }, [schools, deferredQuery, region, group, kind, score, sort]);
 
@@ -188,7 +208,7 @@ export function SchoolFilters({
           </select>
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-semibold text-ink">Khoảng điểm chuẩn 2024</span>
+          <span className="mb-1 block text-xs font-semibold text-ink">Khoảng điểm chuẩn {year}</span>
           <select value={score} onChange={(e) => setScore(e.target.value)} className="h-11 w-full rounded-lg border border-line bg-surface px-2 text-sm text-ink focus:border-accent focus:outline-none">
             {SCORE_RANGES.map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
@@ -229,27 +249,32 @@ export function SchoolFilters({
 /* ---------- Suggestions: client-side sort over server-computed rows ---------- */
 const SORTS = [
   { value: "recommended", label: "Thứ tự ưu tiên (An toàn → Vừa sức → Thử thách)" },
-  { value: "cutoff-desc", label: "Điểm chuẩn 2024 giảm dần" },
+  { value: "cutoff-desc", label: "Điểm chuẩn giảm dần" },
   { value: "delta-desc", label: "Độ dư điểm giảm dần" },
 ] as const;
+
+// ponytail: cutoff math lives in @compass/ui; local alias keeps call sites short
+const cutoffByYear = cutoffForYear;
 
 export function SuggestionList({
   rows,
   deltas,
   score,
+  year,
 }: {
   rows: CutoffRow[];
   deltas: Record<string, number>;
   score: number;
+  year: number;
 }) {
   const [sort, setSort] = useState<(typeof SORTS)[number]["value"]>("recommended");
   const [bucket, setBucket] = useState<"all" | Bucket>("all");
   const sorted = useMemo(() => {
     const arr = [...rows];
-    if (sort === "cutoff-desc") arr.sort((a, b) => b.y2024 - a.y2024);
+    if (sort === "cutoff-desc") arr.sort((a, b) => cutoffByYear(b, year) - cutoffByYear(a, year));
     if (sort === "delta-desc") arr.sort((a, b) => (deltas[b.code] ?? 0) - (deltas[a.code] ?? 0));
     return arr;
-  }, [rows, deltas, sort]);
+  }, [rows, deltas, sort, year]);
   const counts = useMemo(() => {
     const c: Record<Bucket, number> = { reach: 0, match: 0, safe: 0 };
     for (const r of sorted) c[r.tier] += 1;
@@ -288,8 +313,8 @@ export function SuggestionList({
               </option>
             ))}
           </select>
-          <VirtualFilterTip />
-          <ReorderModal items={sorted} />
+          <VirtualFilterTip year={year} />
+          <ReorderModal items={sorted} year={year} />
           <ExportCsv rows={sorted} />
         </div>
         <div className="mt-2 flex flex-wrap gap-2" role="group" aria-label="Lọc theo giỏ">
@@ -325,7 +350,7 @@ export function SuggestionList({
         </div>
       )}
       <p className="mt-3 text-[13px] tabular-nums text-muted">
-        Độ dư = điểm của bạn ({score.toFixed(2)}) trừ điểm chuẩn 2024.
+        Độ dư = điểm của bạn ({score.toFixed(2)}) trừ điểm chuẩn {year}.
       </p>
     </div>
   );
@@ -940,9 +965,9 @@ export function Dial({ value, label }: { value: number; label?: string }) {
 export function ExportCsv({ rows }: { rows: CutoffRow[] }) {
   const download = () => {
     const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const head = ["Thứ tự", "Mã ngành", "Tên Ngành đào tạo", "Tổ hợp", "Phương thức", "2022", "2023", "2024", "Đánh giá"];
+    const head = ["Thứ tự", "Mã ngành", "Tên Ngành đào tạo", "Tổ hợp", "Phương thức", "2022", "2023", "2024", "2025", "Đánh giá"];
     const lines = rows.map((r, i) =>
-      [i + 1, r.code, r.name, r.combos, r.method, r.y2022.toFixed(2), r.y2023.toFixed(2), r.y2024.toFixed(2), BUCKET_META[r.tier].label]
+      [i + 1, r.code, r.name, r.combos, r.method, r.y2022.toFixed(2), r.y2023.toFixed(2), r.y2024.toFixed(2), r.y2025.toFixed(2), BUCKET_META[r.tier].label]
         .map(esc)
         .join(","),
     );
@@ -1037,7 +1062,7 @@ export function FollowingList({ schools }: { schools: (SchoolCardData & { region
 }
 
 /* ---------- Lọc ảo tooltip (CSS-only, hover + keyboard focus) ---------- */
-export function VirtualFilterTip() {
+export function VirtualFilterTip({ year }: { year?: number } = {}) {
   return (
     <span className="group/tip relative inline-flex items-center">
       <button
@@ -1053,7 +1078,7 @@ export function VirtualFilterTip() {
         id="loc-ao-tip"
         className="absolute bottom-full left-1/2 z-30 mb-2 hidden w-64 -translate-x-1/2 rounded-lg border border-line bg-surface p-3 text-[13px] leading-relaxed text-body shadow-lg group-hover/tip:block group-focus-within/tip:block"
       >
-        <strong className="text-ink">Lọc ảo</strong> ẩn các nguyện vọng có điểm chuẩn 2024 cao hơn
+        <strong className="text-ink">Lọc ảo</strong> ẩn các nguyện vọng có điểm chuẩn {year ?? 2024} cao hơn
         điểm của bạn quá 1,5 điểm, giúp danh sách gọn và thực tế hơn.
       </span>
     </span>
@@ -1078,7 +1103,7 @@ function GripIcon() {
   );
 }
 
-export function ReorderModal({ items }: { items: CutoffRow[] }) {
+export function ReorderModal({ items, year }: { items: CutoffRow[]; year: number }) {
   const [open, setOpen] = useState(false);
   const codes = useMemo(() => items.map((i) => i.code), [items]);
   const byCode = useMemo(() => new Map(items.map((i) => [i.code, i])), [items]);
@@ -1203,7 +1228,7 @@ export function ReorderModal({ items }: { items: CutoffRow[] }) {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-ink">{item.name}</span>
                       <span className="text-xs tabular-nums text-muted">
-                        {item.code} • {item.y2024.toFixed(2)}
+                        {item.code} • {cutoffByYear(item, year).toFixed(2)}
                       </span>
                     </span>
                     <TierBadge tier={item.tier} />

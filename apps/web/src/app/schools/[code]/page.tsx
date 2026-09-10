@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { TierBadge } from "@compass/ui";
 import { classifyBucket } from "@compass/ui";
-import { CURRENT_USER, REVIEWS, SCHOOLS, getMajorsBySchool, getSchool } from "../../../mocks";
-import { getCutoffsBySchool, getReviewsBySchool } from "../../../data";
-import { DetailMajorFilter, FollowButton } from "../../../islands";
+import { CURRENT_USER, REVIEWS, SCHOOLS, cutoffForYear, getMajorsBySchool, getSchool } from "../../../mocks";
+import { getCutoffsBySchool, getReviewsBySchool, parseYear } from "../../../data";
+import { DetailMajorFilter, FollowButton, YearSelect } from "../../../islands";
 
 export function generateStaticParams() {
   return SCHOOLS.map((t) => ({ code: t.code.toLowerCase() }));
@@ -16,11 +17,18 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
   return { title: school ? `${school.name} - Compass` : "Không tìm thấy trường - Compass" };
 }
 
-export default async function SchoolDetailPage({ params }: { params: Promise<{ code: string }> }) {
+export default async function SchoolDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ code: string }>;
+  searchParams?: Promise<{ year?: string }>;
+}) {
   const { code } = await params;
   const school = getSchool(code);
   if (!school) notFound();
-  const majors = (await getCutoffsBySchool(school.code)) ?? getMajorsBySchool(school.code);
+  const year = parseYear((await searchParams)?.year);
+  const majors = (await getCutoffsBySchool(school.code, year)) ?? getMajorsBySchool(school.code);
   const normMethod = (m: string) => (m.includes("THPTQG") || m === "THPTQG" ? "THPTQG" : m.includes("TSA") ? "TSA" : m);
   const rows = majors.map((m) => ({
     code: m.code,
@@ -30,16 +38,18 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
     y2022: m.cutoffs.y2022,
     y2023: m.cutoffs.y2023,
     y2024: m.cutoffs.y2024,
-    tier: classifyBucket(CURRENT_USER.score - m.cutoffs.y2024),
+    y2025: m.cutoffs.y2025,
+    tier: classifyBucket(CURRENT_USER.score - cutoffForYear(m.cutoffs, year)),
     quota: (m as { quota?: string }).quota ?? "",
     tuition: (m as { tuition?: string }).tuition ?? "",
   }));
   const combos = [...new Set(majors.flatMap((m) => m.combos))];
   const methods = [...new Set(majors.flatMap((m) => m.methods.map(normMethod)))];
-  const cutoffs = majors.map((m) => m.cutoffs.y2024).filter((v) => v > 0);
+  const cutoffs = majors.map((m) => cutoffForYear(m.cutoffs, year)).filter((v) => v > 0);
   const lo = cutoffs.length ? Math.min(...cutoffs) : 0;
   const hi = cutoffs.length ? Math.max(...cutoffs) : 0;
-  const reviews = (await getReviewsBySchool(school.code)) ?? REVIEWS.filter((r) => r.school_code === school.code);
+  const liveReviews = await getReviewsBySchool(school.code);
+  const reviews = liveReviews ?? REVIEWS.filter((r) => r.school_code === school.code);
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-8 md:px-8 lg:px-12">
       <nav aria-label="Điều hướng" className="text-[13px] text-muted">
@@ -64,10 +74,15 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
           <p className="mt-2 text-sm text-muted">
             {school.name_en} • {school.address}
           </p>
+          <div className="mt-4">
+            <Suspense>
+              <YearSelect year={year} />
+            </Suspense>
+          </div>
           <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
               ["Ngành đào tạo", `${majors.length} ngành`],
-              ["Biên độ điểm 2024", cutoffs.length ? `${lo.toFixed(2)} – ${hi.toFixed(2)}` : "—"],
+              [`Biên độ điểm ${year}`, cutoffs.length ? `${lo.toFixed(2)} – ${hi.toFixed(2)}` : "—"],
               ["Học phí chuẩn", school.tuition],
               ["Tổ hợp chủ lực", school.main_combos.join(" · ")],
             ].map(([l, v]) => (
@@ -113,7 +128,7 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
       <section aria-label="Bảng tra cứu Điểm chuẩn" className="mt-10">
         <p className="text-xs font-semibold tracking-[0.04em] text-[var(--accent)] uppercase">Điểm chuẩn</p>
         <h2 className="mt-2 text-[22px] font-semibold leading-[30px] tracking-tight text-ink">
-          Bảng tra cứu Điểm chuẩn &amp; Ngành đào tạo (2022 - 2024)
+          Bảng tra cứu Điểm chuẩn &amp; Ngành đào tạo (2022 - 2025)
         </h2>
         <p className="mt-2 max-w-2xl text-base leading-relaxed text-body">
           Đối sánh Điểm chuẩn theo Phương thức xét tuyển THPTQG.
@@ -124,7 +139,13 @@ export default async function SchoolDetailPage({ params }: { params: Promise<{ c
             <TierBadge tier="match" />
             <TierBadge tier="reach" />
           </div>
-          <DetailMajorFilter rows={rows} combos={combos} methods={methods} />
+          {rows.length > 0 ? (
+            <DetailMajorFilter rows={rows} combos={combos} methods={methods} />
+          ) : (
+            <p className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-muted">
+              Chưa có Điểm chuẩn {year} cho Trường này.
+            </p>
+          )}
         </div>
       </section>
 

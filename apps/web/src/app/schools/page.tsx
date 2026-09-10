@@ -1,22 +1,21 @@
 import Link from "next/link";
-import { SCHOOLS, MAJORS } from "../../mocks";
-import { SchoolFilters } from "../../islands";
+import { Suspense } from "react";
+import { SCHOOLS, MAJORS, toCard } from "../../mocks";
+import { parseYear } from "../../data";
+import { SchoolFilters, YearSelect } from "../../islands";
 
 export const metadata = { title: "Danh mục Trường & Điểm chuẩn - Compass" };
 
 export default async function SchoolsPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ q?: string }>;
+  searchParams?: Promise<{ q?: string; year?: string }>;
 }) {
-  const q = (await searchParams)?.q ?? "";
+  const sp = (await searchParams) ?? {};
+  const q = sp.q ?? "";
+  const year = parseYear(sp.year);
   const schools = SCHOOLS.map((t) => ({
-    code: t.code,
-    name: t.name,
-    combos: t.main_combos,
-    cutoff2024: t.cutoff2024,
-    trend: t.trend,
-    tuition: t.tuition,
+    ...toCard(t, year),
     kind: t.kind,
     region: t.region,
     groups: t.groups,
@@ -46,6 +45,11 @@ export default async function SchoolsPage({
       <p className="mt-3 max-w-2xl text-base leading-relaxed text-body">
         Tra cứu toàn diện đề án tuyển sinh, biến động điểm chuẩn 3 năm và tổ hợp chủ lực của từng trường.
       </p>
+      <div className="mt-4">
+        <Suspense>
+          <YearSelect year={year} />
+        </Suspense>
+      </div>
       <dl className="mt-4 flex gap-8">
         <div>
           <dt className="sr-only">Số trường</dt>
@@ -61,7 +65,7 @@ export default async function SchoolsPage({
         </div>
       </dl>
       <div className="mt-8">
-        <SchoolFilters schools={schools} regions={regions} groups={groups} kinds={kinds} initialQuery={q} />
+        <SchoolFilters schools={schools} regions={regions} groups={groups} kinds={kinds} initialQuery={q} year={year} />
       </div>
       <div className="mt-10 flex flex-col gap-4 rounded-3xl bg-[#001736] p-8 text-white shadow-xl md:flex-row md:items-center md:justify-between md:p-12">
         <div>

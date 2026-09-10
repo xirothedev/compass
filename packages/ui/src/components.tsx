@@ -47,13 +47,43 @@ export type SchoolCardData = {
   code: string;
   name: string;
   combos: string[];
-  cutoff2024: number;
+  cutoff: number;
+  year: number;
   trend: "up" | "flat" | "down";
   tuition: string;
   kind?: string;
   region?: string;
   majors?: number;
 };
+
+// ponytail: dumb select, router lives in web islands so ui stays next-free
+export function YearSwitcher({
+  year,
+  years,
+  onChange,
+}: {
+  year: number;
+  years: readonly number[];
+  onChange?: (year: number) => void;
+}) {
+  return (
+    <label className="inline-flex items-center gap-2 text-sm text-muted">
+      Năm Điểm chuẩn:
+      <select
+        value={year}
+        onChange={(e) => onChange?.(Number(e.target.value))}
+        aria-label="Năm Điểm chuẩn"
+        className="h-11 rounded-lg border border-line bg-surface px-3 text-sm font-semibold text-ink focus:border-accent focus:outline-none"
+      >
+        {years.map((y) => (
+          <option key={y} value={y}>
+            {y}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
 
 const TREND = { up: "↗ tăng", flat: "→ ổn định", down: "↘ giảm" } as const;
 
@@ -82,8 +112,8 @@ export function SchoolCard({ school }: { school: SchoolCardData }) {
       </div>
       <dl className="grid grid-cols-3 gap-2 rounded-xl bg-surface-2 p-3 text-center">
         <div>
-          <dt className="text-[11px] text-muted">Điểm chuẩn 2024</dt>
-          <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">{school.cutoff2024.toFixed(2)}</dd>
+          <dt className="text-[11px] text-muted">Điểm chuẩn {school.year}</dt>
+          <dd className="mt-0.5 text-base font-bold tabular-nums text-ink">{school.cutoff.toFixed(2)}</dd>
         </div>
         <div>
           <dt className="text-[11px] text-muted">Xu hướng 3 năm</dt>
@@ -127,6 +157,7 @@ export type CutoffRow = {
   y2022: number;
   y2023: number;
   y2024: number;
+  y2025: number;
   tier: Bucket;
   delta?: number;
   quota?: string;
@@ -162,7 +193,7 @@ export function BucketHeader({ tier, count }: { tier: Bucket; count: number }) {
 export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankOffset?: number }) {
   const showDelta = rows.some((r) => typeof r.delta === "number");
   const showMeta = rows.some((r) => r.quota || r.tuition);
-  const head = ["Mã ngành", "Ngành đào tạo", "Tổ hợp môn", "Phương thức", "2022", "2023", "2024"];
+  const head = ["Mã ngành", "Ngành đào tạo", "Tổ hợp môn", "Phương thức", "2022", "2023", "2024", "2025"];
   if (showMeta) head.push("Chỉ tiêu · Học phí");
   if (showDelta) head.push("Chênh lệch");
   head.push("Đánh giá");
@@ -186,11 +217,12 @@ export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankO
             <p className="mt-2 text-[13px] text-muted">
               {r.combos} • {r.method}
             </p>
-            <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <dl className="mt-3 grid grid-cols-4 gap-2 text-center">
               {[
                 ["2022", r.y2022, false],
                 ["2023", r.y2023, false],
-                ["2024", r.y2024, true],
+                ["2024", r.y2024, false],
+                ["2025", r.y2025, true],
               ].map(([label, value, hot]) => (
                 <div
                   key={label as string}
@@ -239,7 +271,7 @@ export function CutoffTable({ rows, rankOffset = 0 }: { rows: CutoffRow[]; rankO
               <td className="px-3 py-3 font-medium text-ink">{r.name}</td>
               <td className="px-3 py-3 text-muted">{r.combos}</td>
               <td className="px-3 py-3 text-muted">{r.method}</td>
-              {[r.y2022, r.y2023, r.y2024].map((y, j) => (
+              {[r.y2022, r.y2023, r.y2024, r.y2025].map((y, j) => (
                 <td key={j} className="px-3 py-3 font-semibold tabular-nums text-ink">
                   {y.toFixed(2)}
                 </td>
